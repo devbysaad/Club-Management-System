@@ -1,0 +1,289 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// USER & ROLES
+/// =============
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role
+
+  admin     Admin?
+  coach     Coach?
+  student   Student?
+  parent    Parent?
+}
+
+enum Role {
+  ADMIN
+  COACH
+  STUDENT
+  PARENT
+}
+
+/// =============
+/// SHARED ENUMS
+/// =============
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+/// =============
+/// PROFILES
+/// =============
+model Admin {
+  id        String @id @default(uuid())
+  userId    String @unique
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  photo     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Coach {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  displayId       String?  @unique
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  photo           String?
+  address         String?
+  specialization  String[]
+  sex             Sex
+  createdAt       DateTime @default(now())
+  bloodType       String?
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ageGroups       CoachAgeGroup[]
+  sessions        TrainingSession[]
+}
+
+model Parent {
+  id        String @id @default(uuid())
+  userId    String @unique
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  address   String?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students  Student[]
+}
+
+model Student {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  displayId    String?   @unique
+  firstName    String
+  lastName     String
+  email        String?
+  dateOfBirth  DateTime
+  photo        String?
+  phone        String?
+  address      String?
+  position     String?
+  jerseyNumber Int?
+  sex          Sex
+  bloodType    String?
+  createdAt    DateTime   @default(now())
+  parentId     String
+  ageGroupId   String
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Parent      @relation(fields: [parentId], references: [id])
+  ageGroup    AgeGroup    @relation(fields: [ageGroupId], references: [id])
+
+  attendances Attendance[]
+  results     Result[]
+}
+
+/// =============
+/// AGE GROUPS
+/// =============
+model AgeGroup {
+  id          String @id @default(uuid())
+  name        String @unique
+  minAge      Int
+  maxAge      Int
+  capacity    Int
+  description String?
+
+  students    Student[]
+  sessions    TrainingSession[]
+  fixtures    Fixture[]
+  coaches     CoachAgeGroup[]
+}
+
+model CoachAgeGroup {
+  id         String @id @default(uuid())
+  coachId    String
+  ageGroupId String
+
+  coach    Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, ageGroupId])
+}
+
+/// =============
+/// TRAINING
+/// =============
+model TrainingSession {
+  id          String               @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  dayOfWeek   DayOfWeek
+  venue       String
+  type        TrainingSessionType
+  coachId     String
+  ageGroupId  String
+
+  coach       Coach                @relation(fields: [coachId], references: [id])
+  ageGroup    AgeGroup             @relation(fields: [ageGroupId], references: [id])
+  attendances Attendance[]
+}
+
+enum TrainingSessionType {
+  TRAINING
+  MATCH
+  FRIENDLY
+  TOURNAMENT
+  FITNESS
+  RECOVERY
+}
+
+/// =============
+/// ATTENDANCE
+/// =============
+model Attendance {
+  id                String            @id @default(uuid())
+  studentId         String
+  trainingSessionId String
+  status            AttendanceStatus
+  notes             String?
+  markedAt          DateTime          @default(now())
+  markedBy          String
+
+  student           Student           @relation(fields: [studentId], references: [id])
+  trainingSession   TrainingSession   @relation(fields: [trainingSessionId], references: [id])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+/// =============
+/// FIXTURES & RESULTS
+/// =============
+model Fixture {
+  id           String      @id @default(uuid())
+  title        String
+  opponent     String
+  date         DateTime
+  time         DateTime
+  venue        String
+  isHome       Boolean
+  type         FixtureType
+  isCompleted  Boolean     @default(false)
+  goalsFor     Int         @default(0)
+  goalsAgainst Int         @default(0)
+  ageGroupId   String
+
+  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id])
+  results  Result[]
+}
+
+enum FixtureType {
+  LEAGUE
+  CUP
+  FRIENDLY
+  TOURNAMENT
+}
+
+model Result {
+  id            String @id @default(uuid())
+  studentId     String
+  fixtureId     String
+  goals         Int     @default(0)
+  assists       Int     @default(0)
+  rating        Float   @default(0)
+  minutesPlayed Int     @default(0)
+  yellowCards   Int     @default(0)
+  redCards      Int     @default(0)
+  notes         String?
+
+  student Student @relation(fields: [studentId], references: [id])
+  fixture Fixture @relation(fields: [fixtureId], references: [id])
+}
+
+/// =============
+/// EVENTS
+/// =============
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  venue       String
+  type        EventType
+}
+
+enum EventType {
+  TOURNAMENT
+  CELEBRATION
+  MEETING
+  TRIAL
+  FUNDRAISER
+  OTHER
+}
+
+/// =============
+/// ANNOUNCEMENTS
+/// =============
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  priority    Int      @default(1)
+  targetRoles Role[]
+  publishedAt DateTime @default(now())
+  expiresAt   DateTime?
+}
