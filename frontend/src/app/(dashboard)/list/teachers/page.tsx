@@ -2,17 +2,14 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import { ITEM_PER_PAGE } from "@/components/setting";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
-import { log } from "console";
 import Image from "next/image";
 import Link from "next/link";
 
 const columns = [
-  {
-    header: "Coach Info",
-    accessor: "info",
-  },
+  { header: "Coach Info", accessor: "info" },
   {
     header: "Coach ID",
     accessor: "displayId",
@@ -33,17 +30,50 @@ const columns = [
     accessor: "phone",
     className: "hidden lg:table-cell",
   },
-  {
-    header: "Actions",
-    accessor: "action",
-  },
+  { header: "Actions", accessor: "action" },
 ];
 
-const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: string } | undefined }) => {
+const CoachListPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}) => {
+  // ✅ SEARCH PARAM (FIXED)
+  const params = await searchParams;
+  const search = params?.search?.trim();
+  const page = Number(params?.page) || 1;
+  const pageSize = ITEM_PER_PAGE
 
-  console.log(searchParams)
-  // Fetch coaches from database with their age groups
+  console.log("SEARCH PARAM:", search, "PAGE:", page);
+
+  // ✅ GET TOTAL COUNT
+  const totalCount = await prisma.coach.count({
+    where: search
+      ? {
+          OR: [
+            { firstName: { contains: search, mode: "insensitive" } },
+            { lastName: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { displayId: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
+  });
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // ✅ PRISMA QUERY WITH SEARCH AND PAGINATION
   const coaches = await prisma.coach.findMany({
+    where: search
+      ? {
+          OR: [
+            { firstName: { contains: search, mode: "insensitive" } },
+            { lastName: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { displayId: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
     include: {
       ageGroups: {
         include: {
@@ -51,10 +81,11 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
         },
       },
     },
-    take: 10
+    take: pageSize,
+    skip: (page - 1) * pageSize,
   });
 
-  const renderRow = (item: typeof coaches[0]) => (
+  const renderRow = (item: typeof coaches[number]) => (
     <tr
       key={item.id}
       className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
@@ -62,7 +93,7 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
       <td className="flex items-center gap-4 p-4">
         <div className="relative">
           <Image
-            src={item.photo || '/noAvatar.png'}
+            src={item.photo || "/noAvatar.png"}
             alt=""
             width={44}
             height={44}
@@ -74,14 +105,16 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
           <h3 className="font-heading font-semibold text-white">
             {item.firstName} {item.lastName}
           </h3>
-          <p className="text-xs text-fcTextMuted">{item?.email}</p>
+          <p className="text-xs text-fcTextMuted">{item.email}</p>
         </div>
       </td>
+
       <td className="hidden md:table-cell text-fcTextMuted">
         <span className="px-2 py-1 rounded bg-fcSurface text-xs font-mono">
           {item.displayId || item.id.slice(0, 8)}
         </span>
       </td>
+
       <td className="hidden md:table-cell">
         <div className="flex flex-wrap gap-1">
           {item.specialization.slice(0, 2).map((spec, idx) => (
@@ -99,6 +132,7 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
           )}
         </div>
       </td>
+
       <td className="hidden md:table-cell">
         <div className="flex flex-wrap gap-1">
           {item.ageGroups.slice(0, 2).map((ag, idx) => (
@@ -116,14 +150,33 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
           )}
         </div>
       </td>
-      <td className="hidden lg:table-cell text-fcTextMuted text-sm">{item.phone || "N/A"}</td>
+
+      <td className="hidden lg:table-cell text-fcTextMuted text-sm">
+        {item.phone || "N/A"}
+      </td>
+
       <td>
         <div className="flex items-center gap-2">
           <Link href={`/list/teachers/${item.id}`}>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-fcBlue/20 hover:bg-fcBlue/30 transition-colors">
-              <svg className="w-4 h-4 text-fcBlue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              <svg
+                className="w-4 h-4 text-fcBlue"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
               </svg>
             </button>
           </Link>
@@ -140,9 +193,14 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
       {/* TOP */}
       <div className="flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
         <div>
-          <h1 className="text-xl font-heading font-bold text-white">All Coaches</h1>
-          <p className="text-sm text-fcTextMuted mt-1">Manage your coaching staff ({coaches.length} total)</p>
+          <h1 className="text-xl font-heading font-bold text-white">
+            All Coaches
+          </h1>
+          <p className="text-sm text-fcTextMuted mt-1">
+            Manage your coaching staff ({totalCount} total)
+          </p>
         </div>
+
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-2">
@@ -163,14 +221,14 @@ const CoachListPage = async ({ searchParams }: { searchParams: { [key: string]: 
         </div>
       </div>
 
-      {/* TABLE - Scrollable */}
+      {/* TABLE */}
       <div className="h-[80%] overflow-auto mt-4">
         <Table columns={columns} renderRow={renderRow} data={coaches} />
       </div>
 
       {/* PAGINATION */}
       <div className="flex-shrink-0 mt-4">
-        <Pagination />
+        <Pagination totalPages={totalPages} />
       </div>
     </div>
   );
