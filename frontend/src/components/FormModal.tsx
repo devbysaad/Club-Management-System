@@ -77,7 +77,7 @@ const FormModal = ({
   table: keyof typeof displayNames;
   type: "create" | "update" | "delete";
   data?: any;
-  id?: number;
+  id?: number | string
 }) => {
   const [open, setOpen] = useState(false);
 

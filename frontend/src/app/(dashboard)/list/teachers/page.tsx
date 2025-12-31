@@ -7,6 +7,7 @@ import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 
 const columns = [
   { header: "Coach Info", accessor: "info" },
@@ -38,52 +39,54 @@ const CoachListPage = async ({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
-  // ✅ SEARCH PARAM (FIXED)
   const params = await searchParams;
-  const search = params?.search?.trim();
-  const page = Number(params?.page) || 1;
-  const pageSize = ITEM_PER_PAGE
+  const currentPage = Number(params?.page) || 1;
 
-  console.log("SEARCH PARAM:", search, "PAGE:", page);
+  // Build Prisma query dynamically
+  const query: Prisma.CoachWhereInput = {};
+  const { page, ...queryParams } = params || {};
 
-  // ✅ GET TOTAL COUNT
-  const totalCount = await prisma.coach.count({
-    where: search
-      ? {
-          OR: [
-            { firstName: { contains: search, mode: "insensitive" } },
-            { lastName: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-            { displayId: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-  });
+  // Handle dynamic filters
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (!value) continue;
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+      switch (key) {
+        case "ageGroup":
+        case "ageGroupId":
+          query.ageGroups = {
+            some: {
+              ageGroupId: value,
+            },
+          };
+          break;
+        case "search":
+          query.OR = [
+            { firstName: { contains: value, mode: "insensitive" } },
+            { lastName: { contains: value, mode: "insensitive" } },
+            { email: { contains: value, mode: "insensitive" } },
+            { displayId: { contains: value, mode: "insensitive" } },
+          ];
+          break;
+        default:
+          break;
+      }
+    }
+  }
 
-  // ✅ PRISMA QUERY WITH SEARCH AND PAGINATION
-  const coaches = await prisma.coach.findMany({
-    where: search
-      ? {
-          OR: [
-            { firstName: { contains: search, mode: "insensitive" } },
-            { lastName: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-            { displayId: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-    include: {
-      ageGroups: {
-        include: {
-          ageGroup: true,
-        },
-      },
-    },
-    take: pageSize,
-    skip: (page - 1) * pageSize,
-  });
+  // Fetch paginated data + total count
+  const [coaches, totalCount] = await prisma.$transaction([
+    prisma.coach.findMany({
+      where: query,
+      include: { ageGroups: { include: { ageGroup: true } } },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+    prisma.coach.count({ where: query }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
+
 
   const renderRow = (item: typeof coaches[number]) => (
     <tr
@@ -97,7 +100,7 @@ const CoachListPage = async ({
             alt=""
             width={44}
             height={44}
-            className="md:hidden xl:block w-11 h-11 rounded-xl object-cover ring-2 ring-fcGarnet/30"
+            className="md:hidden xl:block w-11 h-11 rounded-full object-cover ring-2 ring-fcGarnet/30"
           />
           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-fcGreen rounded-full border-2 border-fcNavy" />
         </div>
@@ -205,14 +208,10 @@ const CoachListPage = async ({
           <TableSearch />
           <div className="flex items-center gap-2">
             <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/50 transition-colors">
-              <svg className="w-4 h-4 text-fcTextMuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
+              {/* Add your filter icon here */}
             </button>
             <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/50 transition-colors">
-              <svg className="w-4 h-4 text-fcTextMuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
+              {/* Add your sort icon here */}
             </button>
             {role === "admin" && (
               <FormModal table="teacher" type="create" />

@@ -14,34 +14,32 @@ const Pagination = ({ totalPages }: { totalPages: number }) => {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  // Generate page numbers dynamically
   const pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1);
 
   return (
-    <div className="py-4 px-2 flex items-center justify-between text-[var(--text-muted)] border-t border-[var(--border-light)] mt-4">
+    <div className="flex items-center justify-between py-3 px-2 border-t border-fcBorder mt-4 text-[var(--text-muted)]">
+      {/* Previous */}
       <button
         disabled={currentPage === 1}
         onClick={() => handlePageChange(currentPage - 1)}
-        className="py-2 px-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--bg-surface-light)] hover:border-fcGarnet/30 transition-all duration-200 flex items-center gap-2"
+        className="py-2 px-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--bg-surface-light)] transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
         Previous
       </button>
 
-      <div className="flex items-center gap-1">
-        {pages.map((pageNum) => (
+      {/* Page Numbers */}
+      <div className="flex items-center gap-2">
+        {pages.map((p) => (
           <button
-            key={pageNum}
-            onClick={() => handlePageChange(pageNum)}
-            className={`w-9 h-9 rounded-lg text-sm font-semibold flex items-center justify-center transition-all ${
-              currentPage === pageNum
+            key={p}
+            onClick={() => handlePageChange(p)}
+            className={`w-9 h-9 rounded-lg text-sm font-medium flex items-center justify-center transition-all ${
+              currentPage === p
                 ? "bg-gradient-to-r from-fcGarnet to-fcBlue text-white shadow-glow-garnet"
                 : "bg-[var(--bg-surface)] border border-[var(--border-color)] hover:border-fcGarnet/30"
             }`}
           >
-            {pageNum}
+            {p}
           </button>
         ))}
         {totalPages > 5 && (
@@ -49,7 +47,7 @@ const Pagination = ({ totalPages }: { totalPages: number }) => {
             <span className="px-2 text-[var(--text-dim)]">...</span>
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`w-9 h-9 rounded-lg text-sm flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-lg text-sm font-medium flex items-center justify-center transition-all ${
                 currentPage === totalPages
                   ? "bg-gradient-to-r from-fcGarnet to-fcBlue text-white shadow-glow-garnet"
                   : "bg-[var(--bg-surface)] border border-[var(--border-color)] hover:border-fcGarnet/30"
@@ -61,15 +59,13 @@ const Pagination = ({ totalPages }: { totalPages: number }) => {
         )}
       </div>
 
+      {/* Next */}
       <button
         disabled={currentPage >= totalPages}
         onClick={() => handlePageChange(currentPage + 1)}
-        className="py-2 px-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--bg-surface-light)] hover:border-fcGarnet/30 transition-all duration-200 flex items-center gap-2"
+        className="py-2 px-4 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--bg-surface-light)] transition-colors"
       >
         Next
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
       </button>
     </div>
   );

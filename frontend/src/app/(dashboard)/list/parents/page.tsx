@@ -2,11 +2,12 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { parentsData, role } from "@/lib/data";
-import Image from "next/image";
+import { role } from "@/lib/data";
+import prisma from "@/lib/prisma";
+import Link from "next/link";
 
 type Parent = {
-  id: number;
+  id: string;
   name: string;
   email?: string;
   students: string[];
@@ -35,7 +36,61 @@ const columns = [
   },
 ];
 
-const ParentListPage = () => {
+const ITEM_PER_PAGE = 10;
+
+const ParentListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const { coachId, page } = searchParams;
+  const currentPage = page ? parseInt(page) : 1;
+
+  // Build query
+  const query: any = {};
+
+  // Filter by coach - get parents whose students are in coach's age groups
+  if (coachId) {
+    const coachAgeGroups = await prisma.coachAgeGroup.findMany({
+      where: { coachId },
+      select: { ageGroupId: true },
+    });
+
+    const ageGroupIds = coachAgeGroups.map((cag) => cag.ageGroupId);
+
+    query.students = {
+      some: {
+        ageGroupId: {
+          in: ageGroupIds,
+        },
+      },
+    };
+  }
+
+  // Fetch real parents from database with pagination
+  const [parents, totalCount] = await prisma.$transaction([
+    prisma.parent.findMany({
+      where: query,
+      include: {
+        students: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        firstName: "asc",
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+    prisma.parent.count({ where: query }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
+
   const renderRow = (item: Parent) => (
     <tr
       key={item.id}
@@ -47,7 +102,7 @@ const ParentListPage = () => {
         </div>
         <div className="flex flex-col">
           <h3 className="font-heading font-semibold text-white">{item.name}</h3>
-          <p className="text-xs text-fcTextMuted">{item?.email}</p>
+          <p className="text-xs text-fcTextMuted">{item?.email || "—"}</p>
         </div>
       </td>
       <td className="hidden md:table-cell">
@@ -62,9 +117,18 @@ const ParentListPage = () => {
           ))}
         </div>
       </td>
-      <td className="hidden lg:table-cell text-fcTextMuted">{item.phone}</td>
+      <td className="hidden lg:table-cell text-fcTextMuted">{item.phone || "—"}</td>
       <td>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/list/parents/${item.id}`}
+            className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </Link>
           {role === "admin" && (
             <>
               <FormModal table="parent" type="update" data={item} />
@@ -76,13 +140,27 @@ const ParentListPage = () => {
     </tr>
   );
 
+  // Transform data for rendering
+  const parentsData = parents.map((parent) => ({
+    id: parent.id,
+    name: `${parent.firstName} ${parent.lastName}`,
+    email: parent.email,
+    students: parent.students.map((s) => `${s.firstName} ${s.lastName}`),
+    phone: parent.phone || "—",
+    address: parent.address || "—",
+  }));
+
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
       {/* TOP */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-heading font-bold text-white">Parents & Guardians</h1>
-          <p className="text-sm text-fcTextMuted mt-1">Player family contacts</p>
+          <h1 className="text-xl font-heading font-bold text-white">
+            Parents & Guardians {coachId ? "(Coach's Parents)" : ""}
+          </h1>
+          <p className="text-sm text-fcTextMuted mt-1">
+            Player family contacts • {totalCount} parents
+          </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
@@ -104,7 +182,7 @@ const ParentListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={parentsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={totalPages} />
     </div>
   );
 };

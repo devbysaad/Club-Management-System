@@ -1,16 +1,21 @@
+// INSTRUCTION: Save this as src/app/(dashboard)/list/classes/page.tsx
+// This matches your existing route structure for age groups/teams
+
 import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { classesData, role } from "@/lib/data";
-import Image from "next/image";
+import { role } from "@/lib/data";
+import prisma from "@/lib/prisma";
 
 type Team = {
-  id: number;
+  id: string;
   name: string;
   capacity: number;
-  grade: number;
-  supervisor: string;
+  minAge: number;
+  maxAge: number;
+  coachName: string;
+  studentCount: number;
 };
 
 const columns = [
@@ -39,20 +44,44 @@ const columns = [
   },
 ];
 
-const teamNames: Record<string, string> = {
-  "1A": "First Team",
-  "2B": "B Team",
-  "3C": "U-21",
-  "4B": "U-19",
-  "5A": "U-17",
-  "5B": "U-16",
-  "6B": "U-15",
-  "6C": "U-14",
-  "6D": "U-13",
-  "7A": "Academy",
-};
+const TeamListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const { coachId } = searchParams;
 
-const TeamListPage = () => {
+  // Build query
+  const query: any = {};
+  if (coachId) {
+    query.coaches = {
+      some: {
+        coachId: coachId,
+      },
+    };
+  }
+
+  // Fetch real age groups from database
+  const ageGroups = await prisma.ageGroup.findMany({
+    where: query,
+    include: {
+      coaches: {
+        include: {
+          coach: true,
+        },
+        take: 1, // Get first coach as "head coach"
+      },
+      _count: {
+        select: {
+          students: true,
+        },
+      },
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+
   const renderRow = (item: Team) => (
     <tr
       key={item.id}
@@ -65,21 +94,21 @@ const TeamListPage = () => {
           </span>
         </div>
         <span className="font-heading font-semibold text-white">
-          {teamNames[item.name] || item.name}
+          {item.name}
         </span>
       </td>
       <td className="hidden md:table-cell">
         <div className="flex items-center gap-2">
-          <span className="text-fcTextMuted">{item.capacity}</span>
+          <span className="text-fcTextMuted">{item.studentCount}/{item.capacity}</span>
           <span className="text-xs text-fcTextDim">players</span>
         </div>
       </td>
       <td className="hidden md:table-cell">
         <span className="px-2 py-1 rounded-lg bg-fcGold/20 text-fcGold text-xs font-medium">
-          U-{item.grade + 12}
+          {item.minAge}-{item.maxAge} years
         </span>
       </td>
-      <td className="hidden md:table-cell text-fcTextMuted">{item.supervisor}</td>
+      <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
       <td>
         <div className="flex items-center gap-2">
           {role === "admin" && (
@@ -93,13 +122,30 @@ const TeamListPage = () => {
     </tr>
   );
 
+  // Transform data for rendering
+  const teamsData = ageGroups.map((ag) => ({
+    id: ag.id,
+    name: ag.name,
+    capacity: ag.capacity,
+    minAge: ag.minAge,
+    maxAge: ag.maxAge,
+    coachName: ag.coaches[0]
+      ? `${ag.coaches[0].coach.firstName} ${ag.coaches[0].coach.lastName}`
+      : "No Coach",
+    studentCount: ag._count.students,
+  }));
+
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
       {/* TOP */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-heading font-bold text-white">All Teams</h1>
-          <p className="text-sm text-fcTextMuted mt-1">Manage club squads</p>
+          <h1 className="text-xl font-heading font-bold text-white">
+            All Teams {coachId ? "(Coach's Teams)" : ""}
+          </h1>
+          <p className="text-sm text-fcTextMuted mt-1">
+            Manage club squads • {teamsData.length} teams
+          </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
@@ -119,7 +165,7 @@ const TeamListPage = () => {
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={classesData} />
+      <Table columns={columns} renderRow={renderRow} data={teamsData} />
       {/* PAGINATION */}
       <Pagination />
     </div>

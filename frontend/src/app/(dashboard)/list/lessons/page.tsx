@@ -1,15 +1,21 @@
+// INSTRUCTION: Save this as src/app/(dashboard)/list/sessions/page.tsx
+// Replace your existing sessions page with this
+
 import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { lessonsData, role } from "@/lib/data";
-import Image from "next/image";
+import { role } from "@/lib/data";
+import prisma from "@/lib/prisma";
 
 type Session = {
-  id: number;
-  subject: string;
-  class: string;
-  teacher: string;
+  id: string;
+  title: string;
+  type: string;
+  ageGroupName: string;
+  coachName: string;
+  date: Date;
+  venue: string;
 };
 
 const columns = [
@@ -32,36 +38,50 @@ const columns = [
   },
 ];
 
-const sessionTypes: Record<string, { name: string; icon: string; color: string }> = {
-  "Math": { name: "Tactical Drill", icon: "🎯", color: "bg-fcGarnet/20" },
-  "English": { name: "Team Talk", icon: "🗣️", color: "bg-fcBlue/20" },
-  "Science": { name: "Fitness Session", icon: "💪", color: "bg-fcGreen/20" },
-  "Social Studies": { name: "Video Analysis", icon: "📹", color: "bg-fcGold/20" },
-  "Art": { name: "Set Piece Practice", icon: "⚽", color: "bg-fcGarnet/20" },
-  "Music": { name: "Recovery Session", icon: "🧘", color: "bg-fcBlue/20" },
-  "History": { name: "Match Review", icon: "📊", color: "bg-fcGreen/20" },
-  "Geography": { name: "Opposition Analysis", icon: "🔍", color: "bg-fcGold/20" },
-  "Physics": { name: "Strength Training", icon: "🏋️", color: "bg-fcGarnet/20" },
-  "Chemistry": { name: "Team Bonding", icon: "🤝", color: "bg-fcBlue/20" },
+const sessionTypeMapping: Record<string, { name: string; icon: string; color: string }> = {
+  "TRAINING": { name: "Tactical Drill", icon: "🎯", color: "bg-fcGarnet/20" },
+  "MATCH": { name: "Match Day", icon: "⚽", color: "bg-fcBlue/20" },
+  "FRIENDLY": { name: "Friendly Match", icon: "🤝", color: "bg-fcGreen/20" },
+  "TOURNAMENT": { name: "Tournament", icon: "🏆", color: "bg-fcGold/20" },
+  "FITNESS": { name: "Fitness Session", icon: "💪", color: "bg-fcGarnet/20" },
+  "RECOVERY": { name: "Recovery Session", icon: "🧘", color: "bg-fcBlue/20" },
 };
 
-const teamNames: Record<string, string> = {
-  "1A": "First Team",
-  "2A": "B Team",
-  "3A": "U-21",
-  "1B": "U-19",
-  "4A": "U-17",
-  "5A": "U-16",
-  "6A": "U-15",
-  "6B": "U-14",
-  "6C": "Academy",
-  "4B": "Youth",
-};
+const TrainingSessionListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const { coachId, ageGroupId } = searchParams;
 
-const TrainingSessionListPage = () => {
+  // Build query
+  const query: any = {};
+  if (coachId) {
+    query.coachId = coachId;
+  }
+  if (ageGroupId) {
+    query.ageGroupId = ageGroupId;
+  }
+
+  // Fetch real sessions from database
+  const sessions = await prisma.trainingSession.findMany({
+    where: query,
+    include: {
+      coach: true,
+      ageGroup: true,
+    },
+    orderBy: {
+      date: "desc",
+    },
+    take: 50,
+  });
+
   const renderRow = (item: Session) => {
-    const session = sessionTypes[item.subject] || { name: item.subject, icon: "📋", color: "bg-fcSurface" };
-    const team = teamNames[item.class] || item.class;
+    const session = sessionTypeMapping[item.type] || { 
+      name: item.title, 
+      icon: "📋", 
+      color: "bg-fcSurface" 
+    };
 
     return (
       <tr
@@ -75,16 +95,18 @@ const TrainingSessionListPage = () => {
             </div>
             <div>
               <span className="font-heading font-semibold text-white block">{session.name}</span>
-              <span className="text-xs text-fcTextDim">Duration: 90 min</span>
+              <span className="text-xs text-fcTextDim">
+                {item.date.toLocaleDateString()} • {item.venue}
+              </span>
             </div>
           </div>
         </td>
         <td>
           <span className="px-2 py-1 rounded-lg bg-fcGarnet/20 text-fcGarnet text-xs font-medium">
-            {team}
+            {item.ageGroupName}
           </span>
         </td>
-        <td className="hidden md:table-cell text-fcTextMuted">{item.teacher}</td>
+        <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
         <td>
           <div className="flex items-center gap-2">
             {role === "admin" && (
@@ -99,13 +121,28 @@ const TrainingSessionListPage = () => {
     );
   };
 
+  // Transform data for rendering
+  const sessionsData = sessions.map((s) => ({
+    id: s.id,
+    title: s.title,
+    type: s.type,
+    ageGroupName: s.ageGroup.name,
+    coachName: `${s.coach.firstName} ${s.coach.lastName}`,
+    date: s.date,
+    venue: s.venue,
+  }));
+
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
       {/* TOP */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-heading font-bold text-white">Training Sessions</h1>
-          <p className="text-sm text-fcTextMuted mt-1">Manage training schedule</p>
+          <h1 className="text-xl font-heading font-bold text-white">
+            Training Sessions {coachId ? "(Coach's Sessions)" : ""}
+          </h1>
+          <p className="text-sm text-fcTextMuted mt-1">
+            Manage training schedule • {sessionsData.length} sessions
+          </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
@@ -125,7 +162,7 @@ const TrainingSessionListPage = () => {
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={lessonsData} />
+      <Table columns={columns} renderRow={renderRow} data={sessionsData} />
       {/* PAGINATION */}
       <Pagination />
     </div>

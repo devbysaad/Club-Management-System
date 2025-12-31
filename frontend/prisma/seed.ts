@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log("🧹 Clearing existing data...");
-  
+
   // Delete in correct order (respecting foreign key constraints)
   await prisma.attendance.deleteMany();
   await prisma.result.deleteMany();
@@ -19,7 +19,7 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.announcement.deleteMany();
   await prisma.user.deleteMany();
-  
+
   console.log("✅ Database cleared!");
   console.log("🌱 Starting to seed...");
 
@@ -47,17 +47,19 @@ async function main() {
   // Coaches
   console.log("Creating coaches...");
   const coaches = [];
-  for (let i = 1; i <= 15; i++) {
+  const numberOfCoaches = Math.floor(Math.random() * 11) + 5; // Random 5–15
+  for (let i = 1; i <= numberOfCoaches; i++) {
+    const suffix = Math.floor(Math.random() * 10000); // Unique email
     const coachUser = await prisma.user.create({
       data: {
-        email: `coach${i}@club.com`,
+        email: `coach${i}_${suffix}@club.com`,
         password: `coach${i}pass`,
         role: "COACH",
         coach: {
           create: {
             firstName: `Coach${i}`,
             lastName: `Lastname${i}`,
-            email: `coach${i}@club.com`,
+            email: `coach${i}_${suffix}@club.com`,
             sex: i % 2 === 0 ? "MALE" : "FEMALE",
             specialization: ["Offense", "Defense"].slice(0, (i % 2) + 1),
           },
@@ -68,13 +70,13 @@ async function main() {
     coaches.push(coachUser.coach!);
   }
 
-  // Age Groups (formerly grades/classes)
+  // Age Groups
   console.log("Creating age groups...");
   const ageGroups = [];
   for (let i = 1; i <= 6; i++) {
     const group = await prisma.ageGroup.create({
       data: {
-        name: `U${10 + i}`, 
+        name: `U${10 + i}`,
         minAge: 10 + i - 1,
         maxAge: 10 + i,
         capacity: Math.floor(Math.random() * (20 - 15 + 1)) + 15,
@@ -83,11 +85,17 @@ async function main() {
     ageGroups.push(group);
   }
 
-  // Connect Coaches to Age Groups (like classes)
+  // Connect Coaches to Age Groups (random subset)
   console.log("Connecting coaches to age groups...");
   for (const coach of coaches) {
+    const numberOfGroups = Math.floor(Math.random() * ageGroups.length) + 1; // at least 1
+    const shuffledGroups = ageGroups
+      .map(a => a)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numberOfGroups);
+
     await prisma.coachAgeGroup.createMany({
-      data: ageGroups.map(ag => ({ coachId: coach.id, ageGroupId: ag.id })),
+      data: shuffledGroups.map(ag => ({ coachId: coach.id, ageGroupId: ag.id })),
       skipDuplicates: true,
     });
   }
@@ -116,23 +124,32 @@ async function main() {
     parents.push(parentUser.parent!);
   }
 
-  // Players (formerly students)
+  // Players / Students
   console.log("Creating players...");
+  const positions = ["GK", "DEF", "MID", "FWD"];
   const players = [];
-  for (let i = 1; i <= 50; i++) {
+  const numberOfPlayers = Math.floor(Math.random() * 41) + 30; // Random 30–70
+  
+  for (let i = 1; i <= numberOfPlayers; i++) {
+    const suffix = Math.floor(Math.random() * 10000); // Unique email
+    const displayId = `PLR${1000 + i}`; // Unique displayId
+    const position = positions[Math.floor(Math.random() * positions.length)]; // Random position
+  
     const playerUser = await prisma.user.create({
       data: {
-        email: `player${i}@club.com`,
+        email: `player${i}_${suffix}@club.com`,
         password: `player${i}pass`,
         role: "STUDENT",
         student: {
           create: {
             firstName: `Player${i}`,
             lastName: `Lastname${i}`,
-            email: `player${i}@club.com`,
+            email: `player${i}_${suffix}@club.com`,
             sex: i % 2 === 0 ? "MALE" : "FEMALE",
             jerseyNumber: i,
-            dateOfBirth: new Date(new Date().setFullYear(new Date().getFullYear() - 10)),
+            position, // assign random position
+            displayId, // assign unique displayId
+            dateOfBirth: new Date(new Date().setFullYear(new Date().getFullYear() - (10 + (i % 8)))), // age between 10–17
             ageGroupId: ageGroups[i % ageGroups.length].id,
             parentId: parents[i % parents.length].id,
           },
@@ -140,10 +157,11 @@ async function main() {
       },
       include: { student: true },
     });
+  
     players.push(playerUser.student!);
   }
 
-  // Training Sessions (formerly lessons)
+  // Training Sessions
   console.log("Creating training sessions...");
   const trainingSessions = [];
   const daysOfWeek = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -166,7 +184,7 @@ async function main() {
     trainingSessions.push(session);
   }
 
-  // Fixtures (formerly exams/assignments)
+  // Fixtures
   console.log("Creating fixtures...");
   const fixtures = [];
   for (let i = 1; i <= 10; i++) {
@@ -204,7 +222,7 @@ async function main() {
     }
   }
 
-  // Results (for fixtures)
+  // Results
   console.log("Creating match results...");
   for (const fixture of fixtures) {
     for (const player of players) {
@@ -242,9 +260,9 @@ async function main() {
   console.log(`
 📊 Summary:
 - Admins: 2
-- Coaches: 15
+- Coaches: ${numberOfCoaches}
 - Parents: 25
-- Players: 50
+- Players: ${numberOfPlayers}
 - Age Groups: 6
 - Training Sessions: 30
 - Fixtures: 10
