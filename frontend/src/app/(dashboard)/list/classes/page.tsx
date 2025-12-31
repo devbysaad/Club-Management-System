@@ -1,5 +1,4 @@
 // INSTRUCTION: Save this as src/app/(dashboard)/list/classes/page.tsx
-// This matches your existing route structure for age groups/teams
 
 import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
@@ -7,6 +6,7 @@ import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 
 type Team = {
   id: string;
@@ -44,12 +44,15 @@ const columns = [
   },
 ];
 
+const ITEM_PER_PAGE = 10;
+
 const TeamListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { coachId } = searchParams;
+  const { coachId, page } = searchParams;
+  const currentPage = page ? parseInt(page) : 1;
 
   // Build query
   const query: any = {};
@@ -61,26 +64,33 @@ const TeamListPage = async ({
     };
   }
 
-  // Fetch real age groups from database
-  const ageGroups = await prisma.ageGroup.findMany({
-    where: query,
-    include: {
-      coaches: {
-        include: {
-          coach: true,
+  // Fetch real age groups from database with pagination
+  const [ageGroups, totalCount] = await prisma.$transaction([
+    prisma.ageGroup.findMany({
+      where: query,
+      include: {
+        coaches: {
+          include: {
+            coach: true,
+          },
+          take: 1, // Get first coach as "head coach"
         },
-        take: 1, // Get first coach as "head coach"
-      },
-      _count: {
-        select: {
-          students: true,
+        _count: {
+          select: {
+            students: true,
+          },
         },
       },
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
+      orderBy: {
+        name: "asc",
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+    prisma.ageGroup.count({ where: query }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
 
   const renderRow = (item: Team) => (
     <tr
@@ -111,6 +121,15 @@ const TeamListPage = async ({
       <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
       <td>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/list/classes/${item.id}`}
+            className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </Link>
           {role === "admin" && (
             <>
               <FormModal table="class" type="update" data={item} />
@@ -144,7 +163,7 @@ const TeamListPage = async ({
             All Teams {coachId ? "(Coach's Teams)" : ""}
           </h1>
           <p className="text-sm text-fcTextMuted mt-1">
-            Manage club squads • {teamsData.length} teams
+            Manage club squads • {totalCount} teams
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -167,7 +186,7 @@ const TeamListPage = async ({
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={teamsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={totalPages} />
     </div>
   );
 };

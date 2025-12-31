@@ -124,7 +124,7 @@ async function main() {
     parents.push(parentUser.parent!);
   }
 
-  // Players / Students
+  // Players / Students - FIXED AGE CALCULATION
   console.log("Creating players...");
   const positions = ["GK", "DEF", "MID", "FWD"];
   const players = [];
@@ -134,6 +134,19 @@ async function main() {
     const suffix = Math.floor(Math.random() * 10000); // Unique email
     const displayId = `PLR${1000 + i}`; // Unique displayId
     const position = positions[Math.floor(Math.random() * positions.length)]; // Random position
+    
+    // Get the age group for this player
+    const ageGroup = ageGroups[i % ageGroups.length];
+    
+    // Calculate a valid age within the age group range
+    const playerAge = Math.floor(Math.random() * (ageGroup.maxAge - ageGroup.minAge + 1)) + ageGroup.minAge;
+    
+    // Calculate date of birth based on the age (so current age matches the age group)
+    const today = new Date();
+    const birthYear = today.getFullYear() - playerAge;
+    const birthMonth = Math.floor(Math.random() * 12); // Random month
+    const birthDay = Math.floor(Math.random() * 28) + 1; // Random day (1-28 to avoid month issues)
+    const dateOfBirth = new Date(birthYear, birthMonth, birthDay);
   
     const playerUser = await prisma.user.create({
       data: {
@@ -147,10 +160,10 @@ async function main() {
             email: `player${i}_${suffix}@club.com`,
             sex: i % 2 === 0 ? "MALE" : "FEMALE",
             jerseyNumber: i,
-            position, // assign random position
-            displayId, // assign unique displayId
-            dateOfBirth: new Date(new Date().setFullYear(new Date().getFullYear() - (10 + (i % 8)))), // age between 10–17
-            ageGroupId: ageGroups[i % ageGroups.length].id,
+            position,
+            displayId,
+            dateOfBirth, // Correct date of birth matching age group
+            ageGroupId: ageGroup.id,
             parentId: parents[i % parents.length].id,
           },
         },
