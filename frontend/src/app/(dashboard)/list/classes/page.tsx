@@ -4,6 +4,7 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import { ITEM_PER_PAGE } from "@/components/setting";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -44,7 +45,56 @@ const columns = [
   },
 ];
 
-const ITEM_PER_PAGE = 10;
+
+const renderRow = (item: Team) => (
+  <tr
+    key={item.id}
+    className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
+  >
+    <td className="flex items-center gap-4 p-4">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fcGarnet to-fcBlue flex items-center justify-center">
+        <span className="text-white font-heading font-bold text-sm">
+          {item.name}
+        </span>
+      </div>
+      <span className="font-heading font-semibold text-white">
+        {item.name}
+      </span>
+    </td>
+    <td className="hidden md:table-cell">
+      <div className="flex items-center gap-2">
+        <span className="text-fcTextMuted">{item.studentCount}/{item.capacity}</span>
+        <span className="text-xs text-fcTextDim">players</span>
+      </div>
+    </td>
+    <td className="hidden md:table-cell">
+      <span className="px-2 py-1 rounded-lg bg-fcGold/20 text-fcGold text-xs font-medium">
+        {item.minAge}-{item.maxAge} years
+      </span>
+    </td>
+    <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
+    <td>
+      <div className="flex items-center gap-2">
+        <Link
+          href={`/list/classes/${item.id}`}
+          className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </Link>
+        {role === "admin" && (
+          <>
+            <FormModal table="class" type="update" data={item} />
+            <FormModal table="class" type="delete" id={item.id} />
+          </>
+        )}
+      </div>
+    </td>
+  </tr>
+);
+
 
 const TeamListPage = async ({
   searchParams,
@@ -92,54 +142,7 @@ const TeamListPage = async ({
 
   const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
 
-  const renderRow = (item: Team) => (
-    <tr
-      key={item.id}
-      className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
-    >
-      <td className="flex items-center gap-4 p-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fcGarnet to-fcBlue flex items-center justify-center">
-          <span className="text-white font-heading font-bold text-sm">
-            {item.name}
-          </span>
-        </div>
-        <span className="font-heading font-semibold text-white">
-          {item.name}
-        </span>
-      </td>
-      <td className="hidden md:table-cell">
-        <div className="flex items-center gap-2">
-          <span className="text-fcTextMuted">{item.studentCount}/{item.capacity}</span>
-          <span className="text-xs text-fcTextDim">players</span>
-        </div>
-      </td>
-      <td className="hidden md:table-cell">
-        <span className="px-2 py-1 rounded-lg bg-fcGold/20 text-fcGold text-xs font-medium">
-          {item.minAge}-{item.maxAge} years
-        </span>
-      </td>
-      <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
-      <td>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/list/classes/${item.id}`}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </Link>
-          {role === "admin" && (
-            <>
-              <FormModal table="class" type="update" data={item} />
-              <FormModal table="class" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
+  
 
   // Transform data for rendering
   const teamsData = ageGroups.map((ag) => ({

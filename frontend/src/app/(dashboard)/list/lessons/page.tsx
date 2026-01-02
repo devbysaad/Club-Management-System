@@ -5,6 +5,7 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import { ITEM_PER_PAGE } from "@/components/setting";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
 
@@ -47,6 +48,51 @@ const sessionTypeMapping: Record<string, { name: string; icon: string; color: st
   "RECOVERY": { name: "Recovery Session", icon: "🧘", color: "bg-fcBlue/20" },
 };
 
+const renderRow = (item: Session) => {
+  const session = sessionTypeMapping[item.type] || { 
+    name: item.title, 
+    icon: "📋", 
+    color: "bg-fcSurface" 
+  };
+
+  return (
+    <tr
+      key={item.id}
+      className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
+    >
+      <td className="p-4">
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-xl ${session.color} flex items-center justify-center`}>
+            <span className="text-xl">{session.icon}</span>
+          </div>
+          <div>
+            <span className="font-heading font-semibold text-white block">{session.name}</span>
+            <span className="text-xs text-fcTextDim">
+              {item.date.toLocaleDateString()} • {item.venue}
+            </span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <span className="px-2 py-1 rounded-lg bg-fcGarnet/20 text-fcGarnet text-xs font-medium">
+          {item.ageGroupName}
+        </span>
+      </td>
+      <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
+      <td>
+        <div className="flex items-center gap-2">
+          {role === "admin" && (
+            <>
+              <FormModal table="lesson" type="update" data={item} />
+              <FormModal table="lesson" type="delete" id={item.id} />
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 const TrainingSessionListPage = async ({
   searchParams,
 }: {
@@ -64,62 +110,26 @@ const TrainingSessionListPage = async ({
   }
 
   // Fetch real sessions from database
-  const sessions = await prisma.trainingSession.findMany({
-    where: query,
-    include: {
-      coach: true,
-      ageGroup: true,
-    },
-    orderBy: {
-      date: "desc",
-    },
-    take: 50,
-  });
+  // Add pagination and correct orderBy, and use $transaction to get count as in other pages:
+  const currentPage = Number(searchParams.page) || 1;
 
-  const renderRow = (item: Session) => {
-    const session = sessionTypeMapping[item.type] || { 
-      name: item.title, 
-      icon: "📋", 
-      color: "bg-fcSurface" 
-    };
+  const [sessions, totalCount] = await prisma.$transaction([
+    prisma.trainingSession.findMany({
+      where: query,
+      include: {
+        coach: true,
+        ageGroup: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (currentPage - 1),
+    }),
+    prisma.trainingSession.count({ where: query }),
+  ]);
 
-    return (
-      <tr
-        key={item.id}
-        className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
-      >
-        <td className="p-4">
-          <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl ${session.color} flex items-center justify-center`}>
-              <span className="text-xl">{session.icon}</span>
-            </div>
-            <div>
-              <span className="font-heading font-semibold text-white block">{session.name}</span>
-              <span className="text-xs text-fcTextDim">
-                {item.date.toLocaleDateString()} • {item.venue}
-              </span>
-            </div>
-          </div>
-        </td>
-        <td>
-          <span className="px-2 py-1 rounded-lg bg-fcGarnet/20 text-fcGarnet text-xs font-medium">
-            {item.ageGroupName}
-          </span>
-        </td>
-        <td className="hidden md:table-cell text-fcTextMuted">{item.coachName}</td>
-        <td>
-          <div className="flex items-center gap-2">
-            {role === "admin" && (
-              <>
-                <FormModal table="lesson" type="update" data={item} />
-                <FormModal table="lesson" type="delete" id={item.id} />
-              </>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  };
+  const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
 
   // Transform data for rendering
   const sessionsData = sessions.map((s) => ({
@@ -164,7 +174,7 @@ const TrainingSessionListPage = async ({
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={sessionsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={totalPages} />
     </div>
   );
 };

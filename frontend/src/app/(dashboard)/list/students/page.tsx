@@ -138,15 +138,105 @@ const PlayerListPage = async ({
 
   const where: Prisma.StudentWhereInput = {};
 
+ 
   if (search) {
-    where.OR = [
-      { firstName: { contains: search, mode: "insensitive" } },
-      { lastName: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { displayId: { contains: search, mode: "insensitive" } },
-    ];
+    const searchTerms = search.trim().split(/\s+/); // Split by whitespace
+    if (searchTerms.length === 1) {
+      // Single word search - search in firstName, lastName, email, phone
+      where.OR = [
+        {
+          firstName: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+        {
+          lastName: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+        {
+          email: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+        {
+          phone: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+      ];
+    } else {
+      // Multi-word search - assume first word is firstName, rest is lastName
+      const [firstTerm, ...restTerms] = searchTerms;
+      const lastTerm = restTerms.join(" ");
+      where.OR = [
+        // firstName contains first term AND lastName contains rest
+        {
+          AND: [
+            {
+              firstName: {
+                contains: firstTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              lastName: {
+                contains: lastTerm,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        // OR lastName contains first term AND firstName contains rest
+        {
+          AND: [
+            {
+              lastName: {
+                contains: firstTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              firstName: {
+                contains: lastTerm,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        // OR full name in either field (fallback)
+        {
+          firstName: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          lastName: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        // OR email/phone contains the full search
+        {
+          email: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          phone: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
   }
-
   if (ageGroupId) {
     where.ageGroupId = ageGroupId;
   }

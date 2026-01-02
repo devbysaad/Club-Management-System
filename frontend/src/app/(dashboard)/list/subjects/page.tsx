@@ -2,24 +2,35 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { role, subjectsData } from "@/lib/data";
-import Image from "next/image";
+import { ITEM_PER_PAGE } from "@/components/setting";
+import { role } from "@/lib/data";
+import prisma from "@/lib/prisma";
+import { Prisma, TrainingSession, Coach, AgeGroup } from "@prisma/client";
 
-type TrainingProgram = {
-  id: number;
-  name: string;
-  teachers: string[];
+type TrainingSessionList = TrainingSession & { 
+  coach: Coach;
+  ageGroup: AgeGroup;
 };
 
 const columns = [
   {
-    header: "Program Name",
+    header: "Session Name",
     accessor: "name",
   },
   {
-    header: "Coaches",
-    accessor: "teachers",
+    header: "Coach",
+    accessor: "coach",
     className: "hidden md:table-cell",
+  },
+  {
+    header: "Age Group",
+    accessor: "ageGroup",
+    className: "hidden lg:table-cell",
+  },
+  {
+    header: "Date & Time",
+    accessor: "datetime",
+    className: "hidden xl:table-cell",
   },
   {
     header: "Actions",
@@ -27,70 +38,237 @@ const columns = [
   },
 ];
 
-const programNames: Record<string, { name: string; icon: string; color: string }> = {
-  "Math": { name: "Tactical Training", icon: "🎯", color: "bg-fcGarnet/20 text-fcGarnet" },
-  "English": { name: "Communication", icon: "🗣️", color: "bg-fcBlue/20 text-fcBlue" },
-  "Physics": { name: "Strength & Conditioning", icon: "💪", color: "bg-fcGreen/20 text-fcGreen" },
-  "Chemistry": { name: "Team Chemistry", icon: "🤝", color: "bg-fcGold/20 text-fcGold" },
-  "Biology": { name: "Sports Science", icon: "🧬", color: "bg-fcGarnet/20 text-fcGarnet" },
-  "History": { name: "Match Analysis", icon: "📊", color: "bg-fcBlue/20 text-fcBlue" },
-  "Geography": { name: "Opposition Scouting", icon: "🔍", color: "bg-fcGreen/20 text-fcGreen" },
-  "Art": { name: "Set Pieces", icon: "⚽", color: "bg-fcGold/20 text-fcGold" },
-  "Music": { name: "Mental Conditioning", icon: "🧠", color: "bg-fcGarnet/20 text-fcGarnet" },
-  "Literature": { name: "Leadership Training", icon: "👑", color: "bg-fcBlue/20 text-fcBlue" },
+const sessionTypeIcons: Record<string, { icon: string; color: string }> = {
+  "TRAINING": { icon: "🎯", color: "bg-fcGarnet/20 text-fcGarnet" },
+  "MATCH": { icon: "⚽", color: "bg-fcGold/20 text-fcGold" },
+  "FRIENDLY": { icon: "🤝", color: "bg-fcBlue/20 text-fcBlue" },
+  "TOURNAMENT": { icon: "🏆", color: "bg-fcGreen/20 text-fcGreen" },
+  "FITNESS": { icon: "💪", color: "bg-fcGarnet/20 text-fcGarnet" },
+  "RECOVERY": { icon: "🧘", color: "bg-fcBlue/20 text-fcBlue" },
 };
 
-const TrainingProgramListPage = () => {
-  const renderRow = (item: TrainingProgram) => {
-    const program = programNames[item.name] || { name: item.name, icon: "📋", color: "bg-fcSurface text-fcTextMuted" };
+const renderRow = (item: TrainingSessionList) => {
+  const sessionType = sessionTypeIcons[item.type] || { icon: "📋", color: "bg-fcSurface text-fcTextMuted" };
+  const formattedDate = new Intl.DateTimeFormat('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    year: 'numeric'
+  }).format(new Date(item.date));
+  
+  const formattedTime = new Intl.DateTimeFormat('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  }).format(new Date(item.startTime));
 
-    return (
-      <tr
-        key={item.id}
-        className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
-      >
-        <td className="flex items-center gap-4 p-4">
-          <div className={`w-10 h-10 rounded-xl ${program.color.split(' ')[0]} flex items-center justify-center`}>
-            <span className="text-xl">{program.icon}</span>
-          </div>
-          <div>
-            <span className="font-heading font-semibold text-white block">{program.name}</span>
-            <span className="text-xs text-fcTextDim">Code: {item.name}</span>
-          </div>
-        </td>
-        <td className="hidden md:table-cell">
-          <div className="flex flex-wrap gap-1">
-            {item.teachers.map((teacher, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-1 rounded-lg bg-fcSurface text-fcTextMuted text-xs border border-fcBorder"
-              >
-                {teacher}
-              </span>
-            ))}
-          </div>
-        </td>
-        <td>
-          <div className="flex items-center gap-2">
-            {role === "admin" && (
-              <>
-                <FormModal table="subject" type="update" data={item} />
-                <FormModal table="subject" type="delete" id={item.id} />
-              </>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  };
+  return (
+    <tr
+      key={item.id}
+      className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
+    >
+      <td className="flex items-center gap-4 p-4">
+        <div className={`w-10 h-10 rounded-xl ${sessionType.color.split(' ')[0]} flex items-center justify-center`}>
+          <span className="text-xl">{sessionType.icon}</span>
+        </div>
+        <div>
+          <span className="font-heading font-semibold text-white block">{item.title}</span>
+          <span className="text-xs text-fcTextDim">{item.type}</span>
+        </div>
+      </td>
+      <td className="hidden md:table-cell">
+        <span className="px-2 py-1 rounded-lg bg-fcSurface text-fcTextMuted text-xs border border-fcBorder">
+          {item.coach.firstName} {item.coach.lastName}
+        </span>
+      </td>
+      <td className="hidden lg:table-cell">
+        <span className="px-2 py-1 rounded-lg bg-fcBlue/20 text-fcBlue text-xs font-medium">
+          {item.ageGroup.name}
+        </span>
+      </td>
+      <td className="hidden xl:table-cell text-fcTextMuted">
+        <div className="flex flex-col">
+          <span className="text-xs">{formattedDate}</span>
+          <span className="text-xs text-fcTextDim">{formattedTime}</span>
+        </div>
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          {role === "admin" && (
+            <>
+              <FormModal table="trainingSession" type="update" data={item} />
+              <FormModal table="trainingSession" type="delete" id={item.id} />
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+const TrainingProgramListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const { page, ...queryParams } = searchParams;
+  const p = page ? parseInt(page) : 1;
+
+  // URL PARAMS CONDITION
+  const query: Prisma.TrainingSessionWhereInput = {};
+
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (value !== undefined) {
+        switch (key) {
+          case "search":
+            const searchTerms = value.trim().split(/\s+/);
+            
+            if (searchTerms.length === 1) {
+              // Single word search
+              query.OR = [
+                {
+                  title: {
+                    contains: searchTerms[0],
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  venue: {
+                    contains: searchTerms[0],
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  coach: {
+                    firstName: {
+                      contains: searchTerms[0],
+                      mode: "insensitive",
+                    },
+                  },
+                },
+                {
+                  coach: {
+                    lastName: {
+                      contains: searchTerms[0],
+                      mode: "insensitive",
+                    },
+                  },
+                },
+                {
+                  ageGroup: {
+                    name: {
+                      contains: searchTerms[0],
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              ];
+            } else {
+              // Multi-word search for coach names
+              const [firstTerm, ...restTerms] = searchTerms;
+              const lastTerm = restTerms.join(" ");
+              
+              query.OR = [
+                // Coach firstName + lastName
+                {
+                  AND: [
+                    {
+                      coach: {
+                        firstName: {
+                          contains: firstTerm,
+                          mode: "insensitive",
+                        },
+                      },
+                    },
+                    {
+                      coach: {
+                        lastName: {
+                          contains: lastTerm,
+                          mode: "insensitive",
+                        },
+                      },
+                    },
+                  ],
+                },
+                // Coach lastName + firstName (reversed)
+                {
+                  AND: [
+                    {
+                      coach: {
+                        lastName: {
+                          contains: firstTerm,
+                          mode: "insensitive",
+                        },
+                      },
+                    },
+                    {
+                      coach: {
+                        firstName: {
+                          contains: lastTerm,
+                          mode: "insensitive",
+                        },
+                      },
+                    },
+                  ],
+                },
+                // Title contains full search
+                {
+                  title: {
+                    contains: value,
+                    mode: "insensitive",
+                  },
+                },
+                // Venue contains full search
+                {
+                  venue: {
+                    contains: value,
+                    mode: "insensitive",
+                  },
+                },
+                // Age group name contains full search
+                {
+                  ageGroup: {
+                    name: {
+                      contains: value,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              ];
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+
+  const [data, count] = await prisma.$transaction([
+    prisma.trainingSession.findMany({
+      where: query,
+      include: {
+        coach: true,
+        ageGroup: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (p - 1),
+    }),
+    prisma.trainingSession.count({ where: query }),
+  ]);
+
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
       {/* TOP */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-heading font-bold text-white">Training Programs</h1>
-          <p className="text-sm text-fcTextMuted mt-1">Manage training curriculum</p>
+          <h1 className="text-xl font-heading font-bold text-white">Training Sessions</h1>
+          <p className="text-sm text-fcTextMuted mt-1">Manage training schedule • {count} sessions</p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
@@ -105,14 +283,14 @@ const TrainingProgramListPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
             </button>
-            {role === "admin" && <FormModal table="subject" type="create" />}
+            {role === "admin" && <FormModal table="trainingSession" type="create" />}
           </div>
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={subjectsData} />
+      <Table columns={columns} renderRow={renderRow} data={data} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={totalPages} />
     </div>
   );
 };
