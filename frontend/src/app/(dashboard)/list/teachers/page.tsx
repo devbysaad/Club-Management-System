@@ -55,6 +55,77 @@ const columns = [
   },
 ];
 
+
+const renderRow = (item: CoachList) => (
+  <tr
+    key={item.id}
+    className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
+  >
+    <td className="flex items-center gap-4 p-4">
+      <Image
+        src={item.photo || "/noAvatar.png"}
+        alt=""
+        width={40}
+        height={40}
+        className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
+      />
+      <div className="flex flex-col">
+        <h3 className="font-heading font-semibold text-white">{item.name}</h3>
+        <p className="text-xs text-fcTextMuted">{item.email || "—"}</p>
+      </div>
+    </td>
+    <td className="hidden md:table-cell">
+      <span className="px-2 py-1 rounded-lg bg-fcBlue/20 text-fcBlue text-xs font-medium">
+        {item.displayId || item.id.slice(0, 8).toUpperCase()}
+      </span>
+    </td>
+    <td className="hidden md:table-cell">
+      <div className="flex flex-wrap gap-1">
+        {item.specialization.map((spec, index) => (
+          <span
+            key={index}
+            className="px-2 py-1 rounded-lg bg-fcGreen/20 text-fcGreen text-xs font-medium"
+          >
+            {spec}
+          </span>
+        ))}
+      </div>
+    </td>
+    <td className="hidden md:table-cell">
+      <div className="flex flex-wrap gap-1">
+        {item.ageGroups.slice(0, 3).map((ag, index) => (
+          <span
+            key={index}
+            className="px-2 py-1 rounded-lg bg-fcGarnet/20 text-fcGarnet text-xs font-medium"
+          >
+            {ag.ageGroup.name}
+          </span>
+        ))}
+        {item.ageGroups.length > 3 && (
+          <span className="text-xs text-fcTextDim">+{item.ageGroups.length - 3}</span>
+        )}
+      </div>
+    </td>
+    <td className="hidden lg:table-cell text-fcTextMuted">{item.phone || "—"}</td>
+    <td>
+      <div className="flex items-center gap-2">
+        <Link href={`/list/teachers/${item.id}`}>
+          <button className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </Link>
+        {role === "admin" && (
+          <FormModal table="teacher" type="delete" id={item.id} />
+        )}
+      </div>
+    </td>
+  </tr>
+);
+
+
 const CoachListPage = async ({
   searchParams,
 }: {
@@ -206,74 +277,7 @@ const CoachListPage = async ({
     prisma.coach.count({ where: query }),
   ]);
 
-  const renderRow = (item: CoachList) => (
-    <tr
-      key={item.id}
-      className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
-    >
-      <td className="flex items-center gap-4 p-4">
-        <Image
-          src={item.photo || "/noAvatar.png"}
-          alt=""
-          width={40}
-          height={40}
-          className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
-        />
-        <div className="flex flex-col">
-          <h3 className="font-heading font-semibold text-white">{item.name}</h3>
-          <p className="text-xs text-fcTextMuted">{item.email || "—"}</p>
-        </div>
-      </td>
-      <td className="hidden md:table-cell">
-        <span className="px-2 py-1 rounded-lg bg-fcBlue/20 text-fcBlue text-xs font-medium">
-          {item.displayId || item.id.slice(0, 8).toUpperCase()}
-        </span>
-      </td>
-      <td className="hidden md:table-cell">
-        <div className="flex flex-wrap gap-1">
-          {item.specialization.map((spec, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 rounded-lg bg-fcGreen/20 text-fcGreen text-xs font-medium"
-            >
-              {spec}
-            </span>
-          ))}
-        </div>
-      </td>
-      <td className="hidden md:table-cell">
-        <div className="flex flex-wrap gap-1">
-          {item.ageGroups.slice(0, 3).map((ag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 rounded-lg bg-fcGarnet/20 text-fcGarnet text-xs font-medium"
-            >
-              {ag.ageGroup.name}
-            </span>
-          ))}
-          {item.ageGroups.length > 3 && (
-            <span className="text-xs text-fcTextDim">+{item.ageGroups.length - 3}</span>
-          )}
-        </div>
-      </td>
-      <td className="hidden lg:table-cell text-fcTextMuted">{item.phone || "—"}</td>
-      <td>
-        <div className="flex items-center gap-2">
-          <Link href={`/list/teachers/${item.id}`}>
-            <button className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          </Link>
-          {role === "admin" && (
-            <FormModal table="teacher" type="delete" id={item.id} />
-          )}
-        </div>
-      </td>
-    </tr>
-  );
+ 
 
   // Transform data for rendering
   const coachesData = data.map((coach) => ({

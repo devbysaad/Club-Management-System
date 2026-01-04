@@ -269,6 +269,66 @@ async function main() {
     });
   }
 
+  // Announcements
+  console.log("Creating announcements...");
+  const announcementTitles = [
+    "Team Training Schedule Update",
+    "Match Day Preparation",
+    "Parent-Coach Meeting Next Week",
+    "New Equipment Available",
+    "Tournament Registration Open",
+    "End of Season Celebration",
+    "Facility Maintenance Notice",
+    "Player of the Month Awards",
+    "Uniform Collection Reminder",
+    "Club Fundraiser Event",
+  ];
+
+  const announcementContents = [
+    "Please note the updated training schedule for this week.",
+    "All players must arrive 2 hours before kickoff.",
+    "Parents are invited to discuss player progress.",
+    "New training equipment is now available in the store room.",
+    "Register your team for the upcoming regional tournament.",
+    "Join us for the end of season party and awards ceremony.",
+    "Facilities will be closed for maintenance this weekend.",
+    "Congratulations to our outstanding players this month!",
+    "Please collect your new uniforms from the office.",
+    "Support our club by participating in the upcoming fundraiser.",
+  ];
+
+  const targetRolesOptions = [
+    ["ADMIN", "COACH"],
+    ["COACH", "STUDENT"],
+    ["PARENT", "STUDENT"],
+    ["ADMIN", "COACH", "PARENT"],
+    ["ADMIN"],
+    ["STUDENT"],
+    ["PARENT"],
+    ["COACH"],
+    ["ADMIN", "PARENT"],
+    ["COACH", "PARENT", "STUDENT"],
+  ];
+
+  for (let i = 0; i < 10; i++) {
+    const publishDate = new Date();
+    publishDate.setDate(publishDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
+    
+    const expiresDate = new Date(publishDate);
+    expiresDate.setDate(expiresDate.getDate() + 30 + Math.floor(Math.random() * 30)); // Expires 30-60 days after publish
+
+    await prisma.announcement.create({
+      data: {
+        title: announcementTitles[i],
+        content: announcementContents[i],
+        priority: Math.floor(Math.random() * 3) + 1, // Priority 1-3
+        targetRoles: targetRolesOptions[i],
+        publishedAt: publishDate,
+        expiresAt: i % 3 === 0 ? expiresDate : null, // Some don't expire
+      },
+    });
+  }
+
   console.log("✅ Football club seeding completed successfully!");
   console.log(`
 📊 Summary:
@@ -280,6 +340,7 @@ async function main() {
 - Training Sessions: 30
 - Fixtures: 10
 - Events: 5
+- Announcements: 10
   `);
 }
 

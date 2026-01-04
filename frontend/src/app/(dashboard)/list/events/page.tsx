@@ -2,26 +2,24 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { eventsData, role } from "@/lib/data";
-import Image from "next/image";
-
-type Event = {
-  id: number;
-  title: string;
-  class: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-};
+import { ITEM_PER_PAGE } from "@/components/setting";
+import { role } from "@/lib/data";
+import prisma from "@/lib/prisma";
+import { Prisma, Event } from "@prisma/client";
 
 const columns = [
   {
-    header: "Event",
+    header: "Title",
     accessor: "title",
   },
   {
-    header: "Team",
-    accessor: "class",
+    header: "Type",
+    accessor: "type",
+  },
+  {
+    header: "Venue",
+    accessor: "venue",
+    className: "hidden md:table-cell",
   },
   {
     header: "Date",
@@ -29,112 +27,163 @@ const columns = [
     className: "hidden md:table-cell",
   },
   {
-    header: "Time",
-    accessor: "time",
+    header: "Start Time",
+    accessor: "startTime",
     className: "hidden lg:table-cell",
   },
   {
-    header: "Actions",
-    accessor: "action",
+    header: "End Time",
+    accessor: "endTime",
+    className: "hidden lg:table-cell",
   },
+  ...(role === "admin"
+    ? [
+        {
+          header: "Actions",
+          accessor: "action",
+        },
+      ]
+    : []),
 ];
 
-// Event type detection
-const getEventType = (title: string) => {
-  const lowerTitle = title.toLowerCase();
-  if (lowerTitle.includes('match') || lowerTitle.includes('vs') || lowerTitle.includes('game')) {
-    return { icon: '⚽', bg: 'bg-fcGarnet/20', text: 'text-fcGarnet', label: 'Match' };
-  } else if (lowerTitle.includes('training') || lowerTitle.includes('session') || lowerTitle.includes('practice')) {
-    return { icon: '🏃', bg: 'bg-fcBlue/20', text: 'text-fcBlue', label: 'Training' };
-  } else if (lowerTitle.includes('media') || lowerTitle.includes('press') || lowerTitle.includes('conference')) {
-    return { icon: '🎤', bg: 'bg-fcGold/20', text: 'text-fcGold', label: 'Media' };
-  } else {
-    return { icon: '📅', bg: 'bg-fcGreen/20', text: 'text-fcGreen', label: 'Event' };
-  }
+// Event type styling
+const eventTypeStyles: Record<string, { icon: string; bg: string; text: string }> = {
+  TOURNAMENT: { icon: '🏆', bg: 'bg-fcGold/20', text: 'text-fcGold' },
+  CELEBRATION: { icon: '🎉', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
+  MEETING: { icon: '🤝', bg: 'bg-fcBlue/20', text: 'text-fcBlue' },
+  TRIAL: { icon: '🎯', bg: 'bg-fcGarnet/20', text: 'text-fcGarnet' },
+  FUNDRAISER: { icon: '💰', bg: 'bg-fcGold/20', text: 'text-fcGold' },
+  OTHER: { icon: '📅', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
 };
 
-const EventListPage = () => {
+const EventListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
   const renderRow = (item: Event) => {
-    const eventType = getEventType(item.title);
+    const eventStyle = eventTypeStyles[item.type] || eventTypeStyles.OTHER;
 
     return (
       <tr
         key={item.id}
-        className="border-b border-[var(--border-light)] text-sm hover:bg-[var(--bg-surface)] transition-colors"
+        className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
       >
         <td className="flex items-center gap-4 p-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl ${eventType.bg} flex items-center justify-center`}>
-              <span className="text-lg">{eventType.icon}</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-[var(--text-primary)]">{item.title}</h3>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${eventType.bg} ${eventType.text}`}>
-                {eventType.label}
-              </span>
-            </div>
+          <div className={`w-10 h-10 rounded-xl ${eventStyle.bg} flex items-center justify-center`}>
+            <span className="text-lg">{eventStyle.icon}</span>
           </div>
-        </td>
-        <td>
-          <span className="px-3 py-1.5 rounded-lg bg-fcBlue/10 text-fcBlue text-xs font-medium">
-            {item.class}
-          </span>
-        </td>
-        <td className="hidden md:table-cell">
-          <span className="text-[var(--text-muted)] text-xs bg-[var(--bg-surface)] px-2 py-1 rounded">
-            {item.date}
-          </span>
-        </td>
-        <td className="hidden lg:table-cell">
-          <div className="flex items-center gap-1">
-            <span className="text-[var(--text-primary)] text-xs font-medium">{item.startTime}</span>
-            <span className="text-[var(--text-dim)]">-</span>
-            <span className="text-[var(--text-muted)] text-xs">{item.endTime}</span>
-          </div>
-        </td>
-        <td>
-          <div className="flex items-center gap-2">
-            {role === "admin" && (
-              <>
-                <FormModal table="event" type="update" data={item} />
-                <FormModal table="event" type="delete" id={item.id} />
-              </>
+          <div>
+            <h3 className="font-heading font-semibold text-white">{item.title}</h3>
+            {item.description && (
+              <p className="text-xs text-fcTextDim line-clamp-1">{item.description}</p>
             )}
           </div>
         </td>
+        <td>
+          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${eventStyle.bg} ${eventStyle.text}`}>
+            {item.type}
+          </span>
+        </td>
+        <td className="hidden md:table-cell text-fcTextMuted">{item.venue}</td>
+        <td className="hidden md:table-cell">
+          <span className="text-fcTextMuted text-xs">
+            {new Intl.DateTimeFormat("en-US").format(item.date)}
+          </span>
+        </td>
+        <td className="hidden lg:table-cell text-fcTextMuted">
+          {item.startTime.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })}
+        </td>
+        <td className="hidden lg:table-cell text-fcTextMuted">
+          {item.endTime.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })}
+        </td>
+        {role === "admin" && (
+          <td>
+            <div className="flex items-center gap-2">
+              <FormModal table="event" type="update" data={item} />
+              <FormModal table="event" type="delete" id={item.id} />
+            </div>
+          </td>
+        )}
       </tr>
     );
   };
 
+  const { page, ...queryParams } = searchParams;
+  const p = page ? parseInt(page) : 1;
+
+  // URL PARAMS CONDITION
+  const query: Prisma.EventWhereInput = {};
+
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (value !== undefined) {
+        switch (key) {
+          case "search":
+            query.OR = [
+              { title: { contains: value, mode: "insensitive" } },
+              { description: { contains: value, mode: "insensitive" } },
+              { venue: { contains: value, mode: "insensitive" } },
+            ];
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+
+  const [data, count] = await prisma.$transaction([
+    prisma.event.findMany({
+      where: query,
+      orderBy: {
+        date: "desc",
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (p - 1),
+    }),
+    prisma.event.count({ where: query }),
+  ]);
+
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
       {/* TOP */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-heading font-bold text-[var(--text-primary)]">
-            Club Events
-          </h1>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            Matches, training sessions & more
+          <h1 className="text-xl font-heading font-bold text-white">All Events</h1>
+          <p className="text-sm text-fcTextMuted mt-1">
+            Tournaments, celebrations & more • {count} events
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
-          <div className="flex items-center gap-2 self-end">
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-light)] border border-[var(--border-color)] transition-colors">
-              <Image src="/filter.png" alt="" width={14} height={14} className="opacity-60" />
+          <div className="flex items-center gap-2">
+            <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/50 transition-colors">
+              <svg className="w-4 h-4 text-fcTextMuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
             </button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-light)] border border-[var(--border-color)] transition-colors">
-              <Image src="/sort.png" alt="" width={14} height={14} className="opacity-60" />
+            <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/50 transition-colors">
+              <svg className="w-4 h-4 text-fcTextMuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
             </button>
             {role === "admin" && <FormModal table="event" type="create" />}
           </div>
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={eventsData} />
+      <Table columns={columns} renderRow={renderRow} data={data} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination page={p} count={count} />
     </div>
   );
 };
