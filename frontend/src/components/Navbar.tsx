@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Image from "next/image";
 import { useTheme } from "@/lib/ThemeContext";
+import { UserButton } from "@clerk/nextjs";
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -50,32 +50,26 @@ const Navbar = () => {
           )}
         </button>
 
-        {/* Messages */}
-        <button className="relative p-2.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-light)] border border-[var(--border-color)] hover:border-fcBlue/50 transition-all duration-300 group">
-          <svg className="w-5 h-5 text-[var(--text-muted)] group-hover:text-fcBlue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </button>
-
-        {/* Notifications */}
-        <button className="relative p-2.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-light)] border border-[var(--border-color)] hover:border-fcGarnet/50 transition-all duration-300 group">
-          <svg className="w-5 h-5 text-[var(--text-muted)] group-hover:text-fcGarnet transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          {/* Notification Badge */}
-          <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-gradient-to-r from-fcGarnet to-fcGarnetLight text-white rounded-full text-[10px] font-bold shadow-glow-garnet">
-            3
-          </div>
-        </button>
+        {/* Messages & Notifications */}
+        {/* ... keep your existing buttons ... */}
 
         {/* Divider */}
         <div className="w-[1px] h-8 bg-[var(--border-color)] mx-1" />
 
         {/* User Profile */}
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--bg-surface)] transition-all duration-300 cursor-pointer group">
-          <div className="flex flex-col text-right">
+          {/* Name + Role */}
+          <div className="flex flex-col text-right pr-2">
             <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-fcGold transition-colors">
-              Carlos Rodríguez
+              {/* User name comes from Clerk automatically in UserButton */}
+              <UserButton
+                showName={true}
+                appearance={{
+                  elements: {
+                    userButtonText: "text-sm font-semibold text-[var(--text-primary)] group-hover:text-fcGold",
+                  },
+                }}
+              />
             </span>
             <span className="text-[11px] text-[var(--text-muted)] flex items-center justify-end gap-1">
               <span className="w-1.5 h-1.5 bg-fcGold rounded-full" />
@@ -83,18 +77,6 @@ const Navbar = () => {
             </span>
           </div>
 
-          {/* Avatar with Status Ring */}
-          <div className="relative">
-            <div className="absolute inset-[-2px] rounded-full bg-gradient-to-r from-fcGarnet to-fcBlue opacity-50" />
-            <Image
-              src="/avatar.png"
-              alt=""
-              width={42}
-              height={42}
-              className="rounded-full ring-2 ring-[var(--bg-sidebar)] relative z-10"
-            />
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-fcGreen rounded-full border-2 border-[var(--bg-sidebar)] z-20" />
-          </div>
         </div>
       </div>
     </div>

@@ -33,8 +33,11 @@ const Homepage = () => {
               <a href="#gallery" className="text-sm text-[var(--text-muted)] hover:text-fcGold transition-colors">Gallery</a>
               <a href="#training" className="text-sm text-[var(--text-muted)] hover:text-fcGold transition-colors">Training</a>
               <a href="#contact" className="text-sm text-[var(--text-muted)] hover:text-fcGold transition-colors">Contact</a>
-              <Link href="/admin" className="px-4 py-2 rounded-lg bg-gradient-to-r from-fcGarnet to-fcBlue text-white text-sm font-semibold hover:opacity-90 transition-opacity">
-                Dashboard
+              <Link
+                href="/sign-in"
+                className="mt-2 px-4 py-3 rounded-lg bg-gradient-to-r from-fcGarnet to-fcBlue text-white text-center font-semibold"
+              >
+                Login / Sign Up
               </Link>
             </div>
 
@@ -60,8 +63,11 @@ const Homepage = () => {
               <a href="#gallery" onClick={() => setMobileMenuOpen(false)} className="py-2 text-[var(--text-muted)] hover:text-fcGold">Gallery</a>
               <a href="#training" onClick={() => setMobileMenuOpen(false)} className="py-2 text-[var(--text-muted)] hover:text-fcGold">Training</a>
               <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="py-2 text-[var(--text-muted)] hover:text-fcGold">Contact</a>
-              <Link href="/admin" className="mt-2 px-4 py-3 rounded-lg bg-gradient-to-r from-fcGarnet to-fcBlue text-white text-center font-semibold">
-                Dashboard
+              <Link
+                href="/sign-in"
+                className="mt-2 px-4 py-3 rounded-lg bg-gradient-to-r from-fcGarnet to-fcBlue text-white text-center font-semibold"
+              >
+                Login / Sign Up
               </Link>
             </div>
           </div>
@@ -137,7 +143,7 @@ const Homepage = () => {
                 Welcome to <span className="gradient-text">Pato Hornets</span>
               </h2>
               <p className="text-sm md:text-base lg:text-lg text-[var(--text-muted)] mb-6 md:mb-8">
-               Celebrated its opening on October 10, 2025, with supporters from Abu Dhabi and the UK, Pato Hornets Football Academy is dedicated to nurturing the next generation of football stars. Our holistic approach combines technical excellence, tactical awareness, and character development.
+                Celebrated its opening on October 10, 2025, with supporters from Abu Dhabi and the UK, Pato Hornets Football Academy is dedicated to nurturing the next generation of football stars. Our holistic approach combines technical excellence, tactical awareness, and character development.
               </p>
 
               <div className="space-y-3 md:space-y-4">
