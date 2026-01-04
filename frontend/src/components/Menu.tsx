@@ -41,41 +41,41 @@ const menuItems = [
       },
     ],
   },
-  {
-    title: "FOOTBALL",
-    items: [
-      {
-        icon: "/subject.png",
-        label: "Training",
-        href: "/list/subjects",
-        visible: ["admin"],
-      },
-      {
-        icon: "/lesson.png",
-        label: "Sessions",
-        href: "/list/lessons",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/exam.png",
-        label: "Fixtures",
-        href: "/list/exams",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/assignment.png",
-        label: "Stats",
-        href: "/list/assignments",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/result.png",
-        label: "Results",
-        href: "/list/results",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-    ],
-  },
+  // {
+  //   title: "FOOTBALL",
+  //   items: [
+  //     {
+  //       icon: "/subject.png",
+  //       label: "Training",
+  //       href: "/list/subjects",
+  //       visible: ["admin"],
+  //     },
+  //     {
+  //       icon: "/lesson.png",
+  //       label: "Sessions",
+  //       href: "/list/lessons",
+  //       visible: ["admin", "teacher"],
+  //     },
+  //     {
+  //       icon: "/exam.png",
+  //       label: "Fixtures",
+  //       href: "/list/exams",
+  //       visible: ["admin", "teacher", "student", "parent"],
+  //     },
+  //     {
+  //       icon: "/assignment.png",
+  //       label: "Stats",
+  //       href: "/list/assignments",
+  //       visible: ["admin", "teacher", "student", "parent"],
+  //     },
+  //     {
+  //       icon: "/result.png",
+  //       label: "Results",
+  //       href: "/list/results",
+  //       visible: ["admin", "teacher", "student", "parent"],
+  //     },
+  //   ],
+  // },
   {
     title: "CLUB",
     items: [

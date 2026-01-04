@@ -8,6 +8,7 @@ import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/components/setting";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 type Session = {
   id: string;
@@ -49,10 +50,10 @@ const sessionTypeMapping: Record<string, { name: string; icon: string; color: st
 };
 
 const renderRow = (item: Session) => {
-  const session = sessionTypeMapping[item.type] || { 
-    name: item.title, 
-    icon: "📋", 
-    color: "bg-fcSurface" 
+  const session = sessionTypeMapping[item.type] || {
+    name: item.title,
+    icon: "📋",
+    color: "bg-fcSurface"
   };
 
   return (
@@ -98,21 +99,142 @@ const TrainingSessionListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { coachId, ageGroupId } = searchParams;
+  const { page, coachId, ageGroupId, search } = searchParams;
+  const currentPage = page ? parseInt(page) : 1;
 
   // Build query
-  const query: any = {};
+  const query: Prisma.TrainingSessionWhereInput = {};
+
+  // Filter by coach
   if (coachId) {
     query.coachId = coachId;
   }
+
+  // Filter by age group
   if (ageGroupId) {
     query.ageGroupId = ageGroupId;
   }
 
-  // Fetch real sessions from database
-  // Add pagination and correct orderBy, and use $transaction to get count as in other pages:
-  const currentPage = Number(searchParams.page) || 1;
+  // Add search functionality with improved multi-word search
+  if (search) {
+    const searchTerms = search.trim().split(/\s+/);
+    
+    if (searchTerms.length === 1) {
+      // Single word search
+      query.OR = [
+        {
+          title: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+        {
+          venue: {
+            contains: searchTerms[0],
+            mode: "insensitive",
+          },
+        },
+        {
+          coach: {
+            firstName: {
+              contains: searchTerms[0],
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          coach: {
+            lastName: {
+              contains: searchTerms[0],
+              mode: "insensitive",
+            },
+          },
+        },
+        {
+          ageGroup: {
+            name: {
+              contains: searchTerms[0],
+              mode: "insensitive",
+            },
+          },
+        },
+      ];
+    } else {
+      // Multi-word search
+      const [firstTerm, ...restTerms] = searchTerms;
+      const lastTerm = restTerms.join(" ");
+      
+      query.OR = [
+        // Coach firstName + lastName
+        {
+          AND: [
+            {
+              coach: {
+                firstName: {
+                  contains: firstTerm,
+                  mode: "insensitive",
+                },
+              },
+            },
+            {
+              coach: {
+                lastName: {
+                  contains: lastTerm,
+                  mode: "insensitive",
+                },
+              },
+            },
+          ],
+        },
+        // Coach lastName + firstName (reversed)
+        {
+          AND: [
+            {
+              coach: {
+                lastName: {
+                  contains: firstTerm,
+                  mode: "insensitive",
+                },
+              },
+            },
+            {
+              coach: {
+                firstName: {
+                  contains: lastTerm,
+                  mode: "insensitive",
+                },
+              },
+            },
+          ],
+        },
+        // Title contains full search
+        {
+          title: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        // Venue contains full search
+        {
+          venue: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        // Age group name
+        {
+          ageGroup: {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      ];
+    }
+  }
 
+  // Fetch sessions with pagination
   const [sessions, totalCount] = await prisma.$transaction([
     prisma.trainingSession.findMany({
       where: query,
@@ -151,7 +273,7 @@ const TrainingSessionListPage = async ({
             Training Sessions {coachId ? "(Coach's Sessions)" : ""}
           </h1>
           <p className="text-sm text-fcTextMuted mt-1">
-            Manage training schedule • {sessionsData.length} sessions
+            Manage training schedule • {totalCount} sessions
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
