@@ -9,8 +9,9 @@ import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
+import { ITEM_PER_PAGE } from "@/lib/setting";
 
-const ITEM_PER_PAGE = 10;
+
 
 type CoachList = {
   id: string;
