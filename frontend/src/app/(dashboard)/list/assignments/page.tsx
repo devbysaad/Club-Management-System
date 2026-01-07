@@ -2,7 +2,8 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { assignmentsData, role } from "@/lib/data";
+import { assignmentsData } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 
 type PlayerStat = {
@@ -64,7 +65,11 @@ const teams: Record<string, string> = {
   "8A": "Youth",
 };
 
-const PlayerStatsListPage = () => {
+const PlayerStatsListPage = async () => {
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   const renderRow = (item: PlayerStat) => {
     const stat = statCategories[item.subject] || { name: item.subject, icon: "📊", color: "bg-fcSurface" };
     const team = teams[item.class] || item.class;

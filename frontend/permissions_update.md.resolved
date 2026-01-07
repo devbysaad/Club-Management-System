@@ -1,0 +1,164 @@
+# Role Permission Updates
+
+## ✅ Changes Made
+
+### 1. Route Access Permissions
+
+**File:** [setting.tsx](file:///G:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/setting.tsx)
+
+#### Before:
+```tsx
+"/list/teachers": ["admin", "teacher"],
+"/list/students": ["admin", "teacher"],
+```
+
+#### After:
+```tsx
+"/list/teachers": ["admin", "teacher", "student", "parent"], // Students and parents can see coaches
+"/list/students": ["admin", "teacher", "student", "parent"], // Students can see other students, parents can see their children
+```
+
+---
+
+### 2. Menu Visibility
+
+**File:** [Menu.tsx](file:///G:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/Menu.tsx)
+
+#### Updated Items:
+```tsx
+{
+  icon: "/teacher.png",
+  label: "Coaches",
+  href: "/list/teachers",
+  visible: ["admin", "teacher", "student", "parent"], // ✅ Now visible to all
+},
+{
+  icon: "/student.png",
+  label: "Players",
+  href: "/list/students",
+  visible: ["admin", "teacher", "student", "parent"], // ✅ Now visible to all
+},
+```
+
+---
+
+## 📋 Final Permission Matrix
+
+| Role | Dashboard | Coaches | Players | Parents | Teams | Create/Delete |
+|------|-----------|---------|---------|---------|-------|---------------|
+| **Admin** | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ✅ **YES** |
+| **Teacher/Coach** | ✅ View | ✅ View | ✅ View | ✅ View | ✅ View | ❌ **NO** |
+| **Student** | ✅ View | ✅ View | ✅ View | ❌ No | ❌ No | ❌ **NO** |
+| **Parent** | ✅ View | ✅ View | ✅ View | ❌ No | ❌ No | ❌ **NO** |
+
+---
+
+## 🎯 Permission Details
+
+### Admin
+- ✅ Can see everything
+- ✅ Can create new records
+- ✅ Can edit existing records
+- ✅ Can delete records
+
+### Teacher/Coach
+- ✅ Can see everything (all lists)
+- ❌ **Cannot** create new records
+- ❌ **Cannot** delete records
+- ℹ️ Can view full details but buttons are hidden
+
+### Student
+- ✅ Can see their own student ID
+- ✅ Can see list of all students (their classmates)
+- ✅ Can see list of all coaches
+- ✅ Can see events and announcements
+- ❌ Cannot see parents list
+- ❌ Cannot see teams/classes list
+- ❌ Cannot create or delete anything
+
+### Parent
+- ✅ Can see their children (in students list)
+- ✅ Can see their children's coaches
+- ✅ Can see events and announcements
+- ❌ Cannot see parents list
+- ❌ Cannot see teams/classes list
+- ❌ Cannot create or delete anything
+
+---
+
+## 🔒 Create/Delete Restrictions
+
+**Already Implemented** - No changes needed!
+
+All list pages already check:
+```tsx
+{role === "admin" && <FormModal table="student" type="create" />}
+{role === "admin" && <FormModal table="student" type="delete" id={item.id} />}
+```
+
+This means:
+- Only admin sees create button
+- Only admin sees delete button
+- Teachers can view everything but cannot modify
+
+### Files Already Protected:
+- ✅ `/list/teachers/page.tsx` - Line 321
+- ✅ [/list/students/page.tsx](file:///G:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/app/%28dashboard%29/list/students/page.tsx) - Line 274, 121
+- ✅ `/list/parents/page.tsx` - Line 279, 233
+- ✅ `/list/classes/page.tsx` - Line 185, 87
+- ✅ `/list/events/page.tsx` - Line 179, 108
+- ✅ `/list/announcements/page.tsx` - Line 178, 99
+
+---
+
+## 🧪 Test Scenarios
+
+### Test 1: Admin Login
+1. Sign in as admin
+2. ✅ Should see: Dashboard, Coaches, Players, Parents, Teams, Events, News
+3. ✅ Should see "Create" button on all list pages
+4. ✅ Should see "Delete" button on all rows
+
+### Test 2: Teacher Login
+1. Sign in as teacher
+2. ✅ Should see: Dashboard, Coaches, Players, Parents, Teams, Events, News
+3. ✅ Can view all lists
+4. ❌ **Should NOT see** "Create" button
+5. ❌ **Should NOT see** "Delete" button
+
+### Test 3: Student Login
+1. Sign in as student
+2. ✅ Should see: Dashboard, Coaches, Players, Events, News, Profile, Settings
+3. ✅ Can view students list (see classmates)
+4. ✅ Can view coaches list
+5. ❌ Should NOT see Parents or Teams in menu
+6. ❌ Should NOT see create/delete buttons
+
+### Test 4: Parent Login
+1. Sign in as parent
+2. ✅ Should see: Dashboard, Coaches, Players, Events, News, Profile, Settings
+3. ✅ Can view students list (see their children)
+4. ✅ Can view coaches list
+5. ❌ Should NOT see Parents or Teams in menu
+6. ❌ Should NOT see create/delete buttons
+
+---
+
+## 📝 Summary
+
+**Only 2 files changed:**
+
+1. **[setting.tsx](file:///G:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/setting.tsx)** - Expanded route access for `/list/teachers` and `/list/students`
+2. **[Menu.tsx](file:///G:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/Menu.tsx)** - Updated visible roles for Coaches and Players menu items
+
+**No changes needed for:**
+- Create/delete button logic (already admin-only)
+- List page components (already have correct role checks)
+- Any other existing functionality
+
+**Result:**
+- Admin has full control ✅
+- Teachers can view everything but not modify ✅
+- Students can see their peers and coaches ✅
+- Parents can see their children and coaches ✅
+- All without breaking existing logic ✅

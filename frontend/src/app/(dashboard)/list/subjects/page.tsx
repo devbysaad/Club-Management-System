@@ -3,11 +3,11 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma, TrainingSession, Coach, AgeGroup } from "@prisma/client";
 
-type TrainingSessionList = TrainingSession & { 
+type TrainingSessionList = TrainingSession & {
   coach: Coach;
   ageGroup: AgeGroup;
 };
@@ -47,18 +47,18 @@ const sessionTypeIcons: Record<string, { icon: string; color: string }> = {
   "RECOVERY": { icon: "🧘", color: "bg-fcBlue/20 text-fcBlue" },
 };
 
-const renderRow = (item: TrainingSessionList) => {
+const renderRow = (item: TrainingSessionList, role?: string) => {
   const sessionType = sessionTypeIcons[item.type] || { icon: "📋", color: "bg-fcSurface text-fcTextMuted" };
-  const formattedDate = new Intl.DateTimeFormat('en-US', { 
-    month: 'short', 
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
     day: 'numeric',
     year: 'numeric'
   }).format(new Date(item.date));
-  
-  const formattedTime = new Intl.DateTimeFormat('en-US', { 
-    hour: 'numeric', 
+
+  const formattedTime = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
     minute: '2-digit',
-    hour12: true 
+    hour12: true
   }).format(new Date(item.startTime));
 
   return (
@@ -113,6 +113,10 @@ const TrainingProgramListPage = async ({
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   // URL PARAMS CONDITION
   const query: Prisma.TrainingSessionWhereInput = {};
 
@@ -122,7 +126,7 @@ const TrainingProgramListPage = async ({
         switch (key) {
           case "search":
             const searchTerms = value.trim().split(/\s+/);
-            
+
             if (searchTerms.length === 1) {
               // Single word search
               query.OR = [
@@ -167,7 +171,7 @@ const TrainingProgramListPage = async ({
               // Multi-word search for coach names
               const [firstTerm, ...restTerms] = searchTerms;
               const lastTerm = restTerms.join(" ");
-              
+
               query.OR = [
                 // Coach firstName + lastName
                 {
@@ -288,7 +292,7 @@ const TrainingProgramListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
+      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={data} />
       {/* PAGINATION */}
       <Pagination totalPages={totalPages} />
     </div>

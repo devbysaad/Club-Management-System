@@ -4,7 +4,7 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,7 +57,7 @@ const columns = [
 ];
 
 
-const renderRow = (item: CoachList) => (
+const renderRow = (item: CoachList, role?: string) => (
   <tr
     key={item.id}
     className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
@@ -134,6 +134,10 @@ const CoachListPage = async ({
 }) => {
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
+
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
 
   // Build query conditions
   const query: Prisma.CoachWhereInput = {};
@@ -278,7 +282,7 @@ const CoachListPage = async ({
     prisma.coach.count({ where: query }),
   ]);
 
- 
+
 
   // Transform data for rendering
   const coachesData = data.map((coach) => ({
@@ -323,7 +327,7 @@ const CoachListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={coachesData} />
+      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={coachesData} />
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

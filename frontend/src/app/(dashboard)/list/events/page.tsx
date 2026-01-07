@@ -3,64 +3,69 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma, Event } from "@prisma/client";
 
-const columns = [
-  {
-    header: "Title",
-    accessor: "title",
-  },
-  {
-    header: "Type",
-    accessor: "type",
-  },
-  {
-    header: "Venue",
-    accessor: "venue",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Date",
-    accessor: "date",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Start Time",
-    accessor: "startTime",
-    className: "hidden lg:table-cell",
-  },
-  {
-    header: "End Time",
-    accessor: "endTime",
-    className: "hidden lg:table-cell",
-  },
-  ...(role === "admin"
-    ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-    : []),
-];
-
-// Event type styling
-const eventTypeStyles: Record<string, { icon: string; bg: string; text: string }> = {
-  TOURNAMENT: { icon: '🏆', bg: 'bg-fcGold/20', text: 'text-fcGold' },
-  CELEBRATION: { icon: '🎉', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
-  MEETING: { icon: '🤝', bg: 'bg-fcBlue/20', text: 'text-fcBlue' },
-  TRIAL: { icon: '🎯', bg: 'bg-fcGarnet/20', text: 'text-fcGarnet' },
-  FUNDRAISER: { icon: '💰', bg: 'bg-fcGold/20', text: 'text-fcGold' },
-  OTHER: { icon: '📅', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
-};
 
 const EventListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  const columns = [
+    {
+      header: "Title",
+      accessor: "title",
+    },
+    {
+      header: "Type",
+      accessor: "type",
+    },
+    {
+      header: "Venue",
+      accessor: "venue",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Date",
+      accessor: "date",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Start Time",
+      accessor: "startTime",
+      className: "hidden lg:table-cell",
+    },
+    {
+      header: "End Time",
+      accessor: "endTime",
+      className: "hidden lg:table-cell",
+    },
+    ...(role === "admin"
+      ? [
+        {
+          header: "Actions",
+          accessor: "action",
+        },
+      ]
+      : []),
+  ];
+
+  // Event type styling
+  const eventTypeStyles: Record<string, { icon: string; bg: string; text: string }> = {
+    TOURNAMENT: { icon: '🏆', bg: 'bg-fcGold/20', text: 'text-fcGold' },
+    CELEBRATION: { icon: '🎉', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
+    MEETING: { icon: '🤝', bg: 'bg-fcBlue/20', text: 'text-fcBlue' },
+    TRIAL: { icon: '🎯', bg: 'bg-fcGarnet/20', text: 'text-fcGarnet' },
+    FUNDRAISER: { icon: '💰', bg: 'bg-fcGold/20', text: 'text-fcGold' },
+    OTHER: { icon: '📅', bg: 'bg-fcGreen/20', text: 'text-fcGreen' },
+  };
+
   const renderRow = (item: Event) => {
     const eventStyle = eventTypeStyles[item.type] || eventTypeStyles.OTHER;
 

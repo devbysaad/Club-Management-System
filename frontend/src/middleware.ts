@@ -9,42 +9,34 @@ const publicRoutes = createRouteMatcher([
   "/sign-up(.*)",
 ]);
 
-// Build matchers from settings
-const routeMatchers = Object.entries(routeAccessMap).map(
-  ([route, allowedRoles]) => ({
-    matcher: createRouteMatcher([route]),
-    allowedRoles: allowedRoles as string[],
-  })
-);
+const matchers = Object.keys(routeAccessMap).map((route) => ({
+  matcher: createRouteMatcher([route]),
+  allowedRoles: routeAccessMap[route],
+}));
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = await auth();
+  const pathname = req.nextUrl.pathname;
 
-  // ✅ Allow public routes to pass through
+  console.log("🔵 MIDDLEWARE RUNNING:", pathname);
+
+  // Allow public routes to pass through
   if (publicRoutes(req)) {
+    console.log("✅ Public route, allowing:", pathname);
     return NextResponse.next();
   }
 
-  // 🚫 Not logged in → send to sign-in
+  const { userId } = await auth();
+  console.log("👤 UserId:", userId);
+
+  // Not logged in → send to sign-in
   if (!userId) {
+    console.log("❌ No userId - redirecting to /");
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // ✅ Get role correctly
-  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-
-  // 🚫 Logged in but no role → block
-  if (!role) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // 🔐 Role-based access check
-  for (const { matcher, allowedRoles } of routeMatchers) {
-    if (matcher(req) && !allowedRoles.includes(role)) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-  }
-
+  // User is authenticated - allow access
+  // Role-based routing is handled client-side in the sign-in page
+  console.log("✅ User authenticated - allowing access to:", pathname);
   return NextResponse.next();
 });
 

@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,7 +31,7 @@ const positionColors: Record<string, string> = {
   FWD: "bg-fcGarnet/20 text-fcGarnet",
 };
 
-const renderRow = (item: Player, index: number) => {
+const renderRow = (item: Player, index: number, role?: string) => {
   const position = item.position || "N/A";
   const squad = item.ageGroup?.name || "Academy";
 
@@ -74,9 +74,8 @@ const renderRow = (item: Player, index: number) => {
 
       <td className="hidden md:table-cell">
         <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            positionColors[position] || "bg-fcSurface text-fcTextMuted"
-          }`}
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${positionColors[position] || "bg-fcSurface text-fcTextMuted"
+            }`}
         >
           {position}
         </span>
@@ -136,9 +135,36 @@ const PlayerListPage = async ({
   const search = searchParams.search;
   const ageGroupId = searchParams.ageGroupId;
 
+  // Get user role from Clerk - use currentUser() to access publicMetadata
+  const user = await currentUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+  const userId = user?.id;
+
+  console.log("🔍 DEBUG Students Page:", {
+    userId: user?.id,
+    publicMetadata: user?.publicMetadata,
+    role,
+    roleType: typeof role
+  });
+
   const where: Prisma.StudentWhereInput = {};
 
- 
+  // PARENT RESTRICTION: Parents can only see their own children
+  if (role === "parent") {
+    const parent = await prisma.parent.findUnique({
+      where: { userId: userId! },
+      select: { id: true },
+    });
+
+    if (parent) {
+      where.parentId = parent.id;
+    } else {
+      // If no parent found, show no students
+      where.id = "no-match";
+    }
+  }
+
+
   if (search) {
     const searchTerms = search.trim().split(/\s+/); // Split by whitespace
     if (searchTerms.length === 1) {
@@ -280,7 +306,7 @@ const PlayerListPage = async ({
       <Table
         columns={columns}
         data={students}
-        renderRow={(item, idx) => renderRow(item as Player, idx)}
+        renderRow={(item, idx) => renderRow(item as Player, idx, role)}
       />
 
       {/* PAGINATION */}

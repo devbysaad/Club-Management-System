@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -54,7 +54,7 @@ const fixtureTypeColors: Record<string, string> = {
   "TOURNAMENT": "bg-fcGreen/20 text-fcGreen",
 };
 
-const renderRow = (item: Match) => {
+const renderRow = (item: Match, role?: string) => {
   return (
     <tr
       key={item.id}
@@ -120,6 +120,10 @@ const MatchListPage = async ({
 }) => {
   const { page, ageGroupId, search } = searchParams;
   const currentPage = page ? parseInt(page) : 1;
+
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
 
   // Build query
   const query: Prisma.FixtureWhereInput = {};
@@ -232,7 +236,7 @@ const MatchListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={matchesData} />
+      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={matchesData} />
       {/* PAGINATION */}
       <Pagination totalPages={totalPages} />
     </div>
