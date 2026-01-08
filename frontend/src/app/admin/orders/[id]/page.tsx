@@ -35,9 +35,9 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
                         Order Details
                     </h1>
                     <span className={`px-4 py-2 rounded-full text-sm font-medium ${order.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
-                            order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
-                                order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
-                                    'bg-fcGarnet/20 text-fcGarnet'
+                        order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
+                            order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
+                                'bg-fcGarnet/20 text-fcGarnet'
                         }`}>
                         {order.status}
                     </span>
@@ -103,6 +103,36 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Custom Measurements */}
+                    {(order.customLength || order.customWidth || order.customNotes) && (
+                        <div className="space-y-4">
+                            <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                                <span className="w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-full" />
+                                Custom Measurements
+                            </h2>
+                            <div className="space-y-3">
+                                {order.customLength && (
+                                    <div>
+                                        <label className="text-sm text-[var(--text-muted)]">Length</label>
+                                        <p className="text-[var(--text-primary)] font-medium">{order.customLength} cm</p>
+                                    </div>
+                                )}
+                                {order.customWidth && (
+                                    <div>
+                                        <label className="text-sm text-[var(--text-muted)]">Width/Chest</label>
+                                        <p className="text-[var(--text-primary)] font-medium">{order.customWidth} cm</p>
+                                    </div>
+                                )}
+                                {order.customNotes && (
+                                    <div>
+                                        <label className="text-sm text-[var(--text-muted)]">Additional Notes</label>
+                                        <p className="text-[var(--text-primary)] font-medium whitespace-pre-wrap">{order.customNotes}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Jersey Preview */}

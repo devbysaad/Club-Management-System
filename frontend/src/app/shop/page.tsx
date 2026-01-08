@@ -190,6 +190,52 @@ const ShopPage = () => {
                             </div>
                         </div>
 
+                        {/* Custom Measurements */}
+                        <div className="space-y-4">
+                            <h2 className="text-lg font-heading font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                                <span className="w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-full" />
+                                Custom Measurements (Optional)
+                            </h2>
+                            <p className="text-sm text-[var(--text-muted)]">
+                                Provide custom measurements for a more accurate fit
+                            </p>
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm text-[var(--text-muted)] mb-2 block">Length (cm)</label>
+                                    <input
+                                        type="number"
+                                        name="customLength"
+                                        min="0"
+                                        step="0.1"
+                                        className="w-full px-4 py-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] focus:border-fcGarnet focus:outline-none"
+                                        placeholder="e.g., 75"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-[var(--text-muted)] mb-2 block">Width/Chest (cm)</label>
+                                    <input
+                                        type="number"
+                                        name="customWidth"
+                                        min="0"
+                                        step="0.1"
+                                        className="w-full px-4 py-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] focus:border-fcGarnet focus:outline-none"
+                                        placeholder="e.g., 50"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-[var(--text-muted)] mb-2 block">Additional Notes</label>
+                                <textarea
+                                    name="customNotes"
+                                    rows={3}
+                                    className="w-full px-4 py-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] focus:border-fcGarnet focus:outline-none resize-none"
+                                    placeholder="Any additional measurements or fitting requirements..."
+                                />
+                            </div>
+                        </div>
+
                         {/* Jersey Preview */}
                         <div className="glass-card rounded-xl p-6 bg-gradient-to-br from-fcGarnet/10 to-fcBlue/10">
                             <h3 className="text-sm font-semibold text-[var(--text-muted)] mb-3">Jersey Preview</h3>
