@@ -1,7 +1,7 @@
 // INSTRUCTION: Replace src/app/(dashboard)/list/students/[id]/page.tsx with this
 
 import Announcements from "@/components/Announcements";
-import BigCalendar from "@/components/BigCalender";
+import BigCalendarContainer from "@/components/BigCalendarContainer";
 import Performance from "@/components/Performance";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
@@ -225,7 +225,7 @@ const SingleStudentPage = async ({
           <h1 className="text-xl font-heading font-bold text-white mb-4">
             Student's Schedule
           </h1>
-          <BigCalendar />
+          <BigCalendarContainer type="classId" id={ageGroupId} />
         </div>
       </div>
 
@@ -277,7 +277,7 @@ const SingleStudentPage = async ({
 
         {/* PERFORMANCE */}
         <Performance />
-        
+
         {/* ANNOUNCEMENTS */}
         <Announcements />
       </div>

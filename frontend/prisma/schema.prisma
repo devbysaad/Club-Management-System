@@ -287,3 +287,33 @@ model Announcement {
   publishedAt DateTime @default(now())
   expiresAt   DateTime?
 }
+
+
+/// =============
+/// JERSEY ORDERS
+/// =============
+model Order {
+  id            String      @id @default(cuid())
+  userId        String
+  customerName  String
+  contactNumber String
+  email         String
+  shirtSize     String
+  shortsSize    String
+  socksSize     String
+  jerseyName    String
+  jerseyNumber  Int
+  customLength  String?     // Custom length measurement
+  customWidth   String?     // Custom width/chest measurement  
+  customNotes   String?     // Additional custom measurements
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}

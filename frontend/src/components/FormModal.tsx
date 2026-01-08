@@ -23,11 +23,18 @@ const PlaceholderForm = ({ type, table }: { type: "create" | "update"; table: st
   </div>
 );
 
-// =========================
 // DYNAMIC FORMS
 // =========================
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), { loading: Loader });
 const StudentForm = dynamic(() => import("./forms/StudentForm"), { loading: Loader });
+const ParentForm = dynamic(() => import("./forms/ParentForm"), { loading: Loader });
+const AgeGroupForm = dynamic(() => import("./forms/AgeGroupForm"), { loading: Loader });
+const TrainingSessionForm = dynamic(() => import("./forms/TrainingSessionForm"), { loading: Loader });
+const FixtureForm = dynamic(() => import("./forms/FixtureForm"), { loading: Loader });
+const EventForm = dynamic(() => import("./forms/EventForm"), { loading: Loader });
+const AnnouncementForm = dynamic(() => import("./forms/AnnouncementForm"), { loading: Loader });
+const ResultForm = dynamic(() => import("./forms/ResultForm"), { loading: Loader });
+const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), { loading: Loader });
 
 // =========================
 // FORMS MAPPING
@@ -35,16 +42,15 @@ const StudentForm = dynamic(() => import("./forms/StudentForm"), { loading: Load
 const forms: Record<string, (type: "create" | "update", data?: any) => JSX.Element> = {
   teacher: (type, data) => <TeacherForm type={type} data={data} />,
   student: (type, data) => <StudentForm type={type} data={data} />,
-  parent: (type) => <PlaceholderForm type={type} table="Parent" />,
-  subject: (type) => <PlaceholderForm type={type} table="Training Program" />,
-  class: (type) => <PlaceholderForm type={type} table="Team" />,
-  lesson: (type) => <PlaceholderForm type={type} table="Session" />,
-  exam: (type) => <PlaceholderForm type={type} table="Match" />,
-  assignment: (type) => <PlaceholderForm type={type} table="Stats" />,
-  result: (type) => <PlaceholderForm type={type} table="Result" />,
-  attendance: (type) => <PlaceholderForm type={type} table="Attendance" />,
-  event: (type) => <PlaceholderForm type={type} table="Event" />,
-  announcement: (type) => <PlaceholderForm type={type} table="Announcement" />,
+  parent: (type, data) => <ParentForm type={type} data={data} />,
+  ageGroup: (type, data) => <AgeGroupForm type={type} data={data} />,
+  class: (type, data) => <AgeGroupForm type={type} data={data} />,
+  lesson: (type, data) => <TrainingSessionForm type={type} data={data} />,
+  exam: (type, data) => <FixtureForm type={type} data={data} />,
+  result: (type, data) => <ResultForm type={type} data={data} />,
+  attendance: (type, data) => <AttendanceForm type={type} data={data} />,
+  event: (type, data) => <EventForm type={type} data={data} />,
+  announcement: (type, data) => <AnnouncementForm type={type} data={data} />,
 };
 
 // =========================
@@ -86,8 +92,8 @@ const FormModal = ({
     type === "create"
       ? "bg-gradient-to-r from-fcGarnet to-fcGarnetLight shadow-glow-garnet hover:shadow-lg hover:scale-105"
       : type === "update"
-      ? "bg-fcBlue/20 hover:bg-fcBlue/30 border border-fcBlue/30"
-      : "bg-fcGarnet/10 hover:bg-fcGarnet/20 border border-fcGarnet/30";
+        ? "bg-fcBlue/20 hover:bg-fcBlue/30 border border-fcBlue/30"
+        : "bg-fcGarnet/10 hover:bg-fcGarnet/20 border border-fcGarnet/30";
 
   const Form = () => {
     if (type === "delete") {
@@ -172,9 +178,8 @@ const FormModal = ({
             <div className="sticky top-0 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    type === "delete" ? "bg-fcGarnet/20" : type === "create" ? "bg-fcGreen/20" : "bg-fcBlue/20"
-                  }`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${type === "delete" ? "bg-fcGarnet/20" : type === "create" ? "bg-fcGreen/20" : "bg-fcBlue/20"
+                    }`}
                 >
                   {type === "delete" ? (
                     <svg className="w-5 h-5 text-fcGarnet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,8 +204,8 @@ const FormModal = ({
                     {type === "delete"
                       ? "Confirm deletion"
                       : type === "create"
-                      ? "Fill in the details below"
-                      : "Update the information"}
+                        ? "Fill in the details below"
+                        : "Update the information"}
                   </p>
                 </div>
               </div>

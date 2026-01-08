@@ -6,7 +6,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -49,7 +49,7 @@ const sessionTypeMapping: Record<string, { name: string; icon: string; color: st
   "RECOVERY": { name: "Recovery Session", icon: "🧘", color: "bg-fcBlue/20" },
 };
 
-const renderRow = (item: Session) => {
+const renderRow = (item: Session, role?: string) => {
   const session = sessionTypeMapping[item.type] || {
     name: item.title,
     icon: "📋",
@@ -102,6 +102,10 @@ const TrainingSessionListPage = async ({
   const { page, coachId, ageGroupId, search } = searchParams;
   const currentPage = page ? parseInt(page) : 1;
 
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   // Build query
   const query: Prisma.TrainingSessionWhereInput = {};
 
@@ -118,7 +122,7 @@ const TrainingSessionListPage = async ({
   // Add search functionality with improved multi-word search
   if (search) {
     const searchTerms = search.trim().split(/\s+/);
-    
+
     if (searchTerms.length === 1) {
       // Single word search
       query.OR = [
@@ -163,7 +167,7 @@ const TrainingSessionListPage = async ({
       // Multi-word search
       const [firstTerm, ...restTerms] = searchTerms;
       const lastTerm = restTerms.join(" ");
-      
+
       query.OR = [
         // Coach firstName + lastName
         {
@@ -294,7 +298,7 @@ const TrainingSessionListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={sessionsData} />
+      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={sessionsData} />
       {/* PAGINATION */}
       <Pagination totalPages={totalPages} />
     </div>

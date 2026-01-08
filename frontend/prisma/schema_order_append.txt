@@ -1,0 +1,27 @@
+
+
+/// =============
+/// JERSEY ORDERS
+/// =============
+model Order {
+  id            String      @id @default(cuid())
+  userId        String
+  customerName  String
+  contactNumber String
+  email         String
+  shirtSize     String
+  shortsSize    String
+  socksSize     String
+  jerseyName    String
+  jerseyNumber  Int
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}

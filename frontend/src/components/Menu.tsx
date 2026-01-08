@@ -1,6 +1,6 @@
 "use client";
 
-import { role } from "@/lib/data";
+import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,13 +19,13 @@ const menuItems = [
         icon: "/teacher.png",
         label: "Coaches",
         href: "/list/teachers",
-        visible: ["admin", "teacher"],
+        visible: ["admin", "teacher", "student", "parent"],
       },
       {
         icon: "/student.png",
         label: "Players",
         href: "/list/students",
-        visible: ["admin", "teacher"],
+        visible: ["admin", "teacher", "student", "parent"],
       },
       {
         icon: "/parent.png",
@@ -119,8 +119,29 @@ const menuItems = [
 ];
 
 
+
 const Menu = () => {
   const pathname = usePathname();
+  const { isLoaded, user } = useUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+
+  // Show loading skeleton while auth is loading
+  if (!isLoaded) {
+    return (
+      <div className="py-2 px-2 lg:px-3 animate-pulse">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="mb-4">
+            <div className="h-3 bg-[var(--bg-surface)] rounded w-16 mb-3 mx-2" />
+            <div className="space-y-2">
+              <div className="h-10 bg-[var(--bg-surface)] rounded-xl" />
+              <div className="h-10 bg-[var(--bg-surface)] rounded-xl" />
+              <div className="h-10 bg-[var(--bg-surface)] rounded-xl" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="py-2 px-2 lg:px-3">
@@ -137,7 +158,7 @@ const Menu = () => {
           {/* Menu Items */}
           <div className="flex flex-col gap-1">
             {section.items.map((item) => {
-              if (item.visible.includes(role)) {
+              if (role && item.visible.includes(role)) {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
                 return (

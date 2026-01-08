@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma, Announcement } from "@prisma/client";
 
@@ -12,6 +12,10 @@ const AnnouncementListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   const columns = [
     {
       header: "Title",
@@ -34,11 +38,11 @@ const AnnouncementListPage = async ({
     },
     ...(role === "admin"
       ? [
-          {
-            header: "Actions",
-            accessor: "action",
-          },
-        ]
+        {
+          header: "Actions",
+          accessor: "action",
+        },
+      ]
       : []),
   ];
 

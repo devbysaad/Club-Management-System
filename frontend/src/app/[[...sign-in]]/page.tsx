@@ -11,20 +11,47 @@ const LoginPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-  
+    console.log(" SIGN-IN PAGE useEffect triggered");
+    console.log("  isLoaded:", isLoaded);
+    console.log("  isSignedIn:", isSignedIn);
+
+    if (!isLoaded || !isSignedIn) {
+      console.log("  ⏸️ Waiting for auth to load...");
+      return;
+    }
+
     const role = user?.publicMetadata?.role;
-    if (!role) return;
-  
-    router.replace(
-      role === "admin" ? "/admin" : `/list/${role}s`
-    );
-  }, [isLoaded, isSignedIn, user, router]);
-  
+    console.log("   User role from publicMetadata:", role);
+    console.log("   Full publicMetadata:", user?.publicMetadata);
+
+    if (role) {
+      // Role-based redirect after login
+      const roleRoutes: Record<string, string> = {
+        admin: "/admin",
+        teacher: "/list/teachers",
+        student: "/admin", // Students redirect to admin (dashboard) since they can't access /list/students
+        parent: "/admin", // Parents redirect to admin (dashboard) since they can't access /list/parents
+      };
+
+      const targetRoute = roleRoutes[role as string];
+      console.log("   Target route for role:", targetRoute);
+
+      if (targetRoute) {
+        console.log("   CLIENT-SIDE REDIRECT to:", targetRoute);
+        // Small delay to ensure components are ready
+        setTimeout(() => {
+          router.push(targetRoute);
+        }, 100);
+      }
+    } else {
+      console.log("  NO ROLE - Not redirecting");
+    }
+  }, [user, router, isLoaded, isSignedIn]);
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-fcDarkBg via-fcSurface to-fcDarkBg px-4 relative overflow-hidden">
-      
+
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div

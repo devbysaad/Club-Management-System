@@ -1,6 +1,6 @@
 // src/app/(dashboard)/list/teachers/[id]/page.tsx
 import Announcements from "@/components/Announcements";
-import BigCalendar from "@/components/BigCalender";
+import BigCalendarContainer from "@/components/BigCalendarContainer";
 import FormModal from "@/components/FormModal";
 import Performance from "@/components/Performance";
 import { role } from "@/lib/data";
@@ -173,7 +173,7 @@ const SingleTeacherPage = async ({ params }: { params: { id: string } }) => {
         {/* BOTTOM */}
         <div className="mt-4 bg-white rounded-md p-4 h-[800px]">
           <h1>Coach&apos;s Schedule</h1>
-          <BigCalendar />
+          <BigCalendarContainer type="teacherId" id={teacherId} />
         </div>
       </div>
       {/* RIGHT */}

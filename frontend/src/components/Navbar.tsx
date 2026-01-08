@@ -1,10 +1,19 @@
 'use client';
 
 import { useTheme } from "@/lib/ThemeContext";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, isLoaded } = useUser();
+  const role = user?.publicMetadata?.role as string | undefined;
+
+  const roleLabels: Record<string, string> = {
+    admin: "Club Director",
+    teacher: "Coach",
+    student: "Player",
+    parent: "Parent",
+  };
 
   return (
     <div className="flex items-center justify-between p-4 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] sticky top-0 z-40 backdrop-blur-sm">
@@ -73,7 +82,7 @@ const Navbar = () => {
             </span>
             <span className="text-[11px] text-[var(--text-muted)] flex items-center justify-end gap-1">
               <span className="w-1.5 h-1.5 bg-fcGold rounded-full" />
-              Club Director
+              {isLoaded && role ? roleLabels[role] : "Loading..."}
             </span>
           </div>
 

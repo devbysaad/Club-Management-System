@@ -1,4 +1,4 @@
-import Image from "next/image";
+import prisma from "@/lib/prisma";
 
 const cardConfigs: Record<string, { gradient: string; iconBg: string; icon: string; accent: string }> = {
   player: {
@@ -19,10 +19,10 @@ const cardConfigs: Record<string, { gradient: string; iconBg: string; icon: stri
     icon: "👥",
     accent: "border-fcGold"
   },
-  staff: {
+  admin: {
     gradient: "from-fcGreen/20 to-fcGreen/10",
     iconBg: "bg-fcGreen/20",
-    icon: "🏟️",
+    icon: "🛡️",
     accent: "border-fcGreen"
   },
 };
@@ -31,25 +31,29 @@ const displayNames: Record<string, string> = {
   player: "Players",
   coach: "Coaches",
   parent: "Parents",
-  staff: "Staff",
+  admin: "Admins",
   student: "Players",
   teacher: "Coaches",
 };
 
-const stats: Record<string, { count: string; change: string; trend: 'up' | 'down' }> = {
-  player: { count: "128", change: "+12", trend: "up" },
-  coach: { count: "24", change: "+3", trend: "up" },
-  parent: { count: "89", change: "+5", trend: "up" },
-  staff: { count: "45", change: "+2", trend: "up" },
-  student: { count: "128", change: "+12", trend: "up" },
-  teacher: { count: "24", change: "+3", trend: "up" },
-};
+type UserType = "player" | "coach" | "parent" | "admin" | "student" | "teacher";
 
-const UserCard = ({ type }: { type: string }) => {
+const UserCard = async ({ type }: { type: UserType }) => {
+  // Map the type to the correct Prisma model
+  const modelMap: Record<UserType, any> = {
+    admin: prisma.admin,
+    teacher: prisma.coach, // Teacher maps to Coach in the schema
+    coach: prisma.coach,
+    student: prisma.student,
+    player: prisma.student, // Player maps to Student in the schema
+    parent: prisma.parent,
+  };
+
+  const data = await modelMap[type].count();
+
   const mappedType = type === "student" ? "player" : type === "teacher" ? "coach" : type;
   const config = cardConfigs[mappedType] || cardConfigs.player;
   const displayName = displayNames[type] || type;
-  const stat = stats[type] || stats.player;
 
   return (
     <div className={`
@@ -57,14 +61,14 @@ const UserCard = ({ type }: { type: string }) => {
       bg-gradient-to-br ${config.gradient}
       border-l-4 ${config.accent}
       glass-card card-animate
-      group
+      group hover:scale-105 transition-transform duration-300
     `}>
       {/* Background Glow */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-500" />
 
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
-        <div className={`${config.iconBg} p-3 rounded-xl`}>
+        <div className={`${config.iconBg} p-3 rounded-xl group-hover:scale-110 transition-transform duration-300`}>
           <span className="text-2xl">{config.icon}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -76,17 +80,13 @@ const UserCard = ({ type }: { type: string }) => {
 
       {/* Stats */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-heading font-bold text-[var(--text-primary)]">
-          {stat.count}
+        <h1 className="text-3xl font-heading font-bold text-[var(--text-primary)] group-hover:text-white transition-colors duration-300">
+          {data}
         </h1>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-[var(--text-muted)]">
             {displayName}
           </h2>
-          <span className={`text-xs font-semibold flex items-center gap-1 ${stat.trend === 'up' ? 'text-fcGreen' : 'text-fcGarnet'
-            }`}>
-            {stat.trend === 'up' ? '↑' : '↓'} {stat.change}
-          </span>
         </div>
       </div>
 
@@ -97,8 +97,8 @@ const UserCard = ({ type }: { type: string }) => {
             mappedType === 'coach' ? 'from-fcBlue to-fcBlueLight' :
               mappedType === 'parent' ? 'from-fcGold to-fcGoldLight' :
                 'from-fcGreen to-fcGreenLight'
-            }`}
-          style={{ width: '75%' }}
+            } group-hover:animate-pulse`}
+          style={{ width: `${Math.min((data / 150) * 100, 100)}%` }}
         />
       </div>
     </div>

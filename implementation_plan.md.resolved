@@ -1,0 +1,228 @@
+# Football Club Management System - Implementation Plan
+
+## Overview
+
+This plan completes the Football Club Management System to match the functionality of the school management reference project. The implementation includes creating all missing CRUD forms, Docker containerization, deployment configuration, and comprehensive testing.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Scope Confirmation**: This is a comprehensive completion plan that will take significant time. Please confirm:
+> 1. Do you want ALL missing forms implemented?
+> 2. Do you want Docker + deployment setup included?
+> 3. Which deployment target? (Vercel, Docker container, both)
+> 4. Any specific features to prioritize or skip?
+
+---
+
+## Proposed Changes
+
+### Component: CRUD Forms
+
+All forms will follow the same pattern as existing `TeacherForm` and `StudentForm`, using `react-hook-form` with `zod` validation.
+
+#### [NEW] [ParentForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/ParentForm.tsx)
+- Create/Update parent profiles
+- Fields: firstName, lastName, email, phone, address
+- Links to their children (students)
+
+#### [NEW] [AgeGroupForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/AgeGroupForm.tsx)
+- Create/Update age groups (replaces ClassForm)
+- Fields: name, minAge, maxAge, capacity, description
+- Assign coaches to age groups
+
+#### [NEW] [TrainingSessionForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/TrainingSessionForm.tsx)
+- Create/Update training sessions (replaces LessonForm)
+- Fields: title, description, date, startTime, endTime, dayOfWeek, venue, type, coachId, ageGroupId
+- Schedule recurring sessions
+
+#### [NEW] [FixtureForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/FixtureForm.tsx)
+- Create/Update fixtures/matches (replaces ExamForm)
+- Fields: title, opponent, date, time, venue, isHome, type, ageGroupId
+- Result tracking (goalsFor, goalsAgainst)
+
+#### [NEW] [EventForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/EventForm.tsx)
+- Create/Update club events
+- Fields: title, description, date, startTime, endTime, venue, type
+
+#### [NEW] [AnnouncementForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/AnnouncementForm.tsx)
+- Create/Update announcements
+- Fields: title, content, priority, targetRoles, expiresAt
+
+#### [NEW] [ResultForm.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/forms/ResultForm.tsx)
+- Record individual player performance in matches
+- Fields: studentId, fixtureId, goals, assists, rating, minutesPlayed, cards, notes
+
+#### [MODIFY] [FormModal.tsx](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/components/FormModal.tsx)
+- Add all new form types to the modal router
+- Ensure proper data passing for all forms
+
+---
+
+### Component: Server Actions
+
+Create server actions for all CRUD operations to handle form submissions securely.
+
+#### [NEW] [lib/actions/parent.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/parent.ts)
+- `createParent`, `updateParent`, `deleteParent`
+
+#### [NEW] [lib/actions/ageGroup.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/ageGroup.ts)
+- `createAgeGroup`, `updateAgeGroup`, `deleteAgeGroup`
+
+#### [NEW] [lib/actions/trainingSession.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/trainingSession.ts)
+- `createTrainingSession`, `updateTrainingSession`, `deleteTrainingSession`
+
+#### [NEW] [lib/actions/fixture.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/fixture.ts)
+- `createFixture`, `updateFixture`, `deleteFixture`
+
+#### [NEW] [lib/actions/event.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/event.ts)
+- `createEvent`, `updateEvent`, `deleteEvent`
+
+#### [NEW] [lib/actions/announcement.ts](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/src/lib/actions/announcement.ts)
+- `createAnnouncement`, `updateAnnouncement`, `deleteAnnouncement`
+
+---
+
+### Component: Docker Configuration
+
+#### [NEW] [Dockerfile](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/Dockerfile)
+Multi-stage build for Next.js application:
+- Stage 1: Dependencies installation
+- Stage 2: Build application  
+- Stage 3: Production runtime
+
+#### [NEW] [docker-compose.yml](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/docker-compose.yml)
+Complete stack orchestration:
+- **next-app**: Next.js application container
+- **postgres**: PostgreSQL 16 database
+- **pgadmin**: Database admin interface (optional)
+- Network configuration
+- Volume management for data persistence
+
+#### [NEW] [.dockerignore](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/.dockerignore)
+Optimize build context by excluding unnecessary files
+
+#### [MODIFY] [.env.example](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/frontend/.env.example)
+Template for all required environment variables
+
+---
+
+### Component: Deployment Documentation
+
+#### [NEW] [docker-deployment-guide.md](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/docker-deployment-guide.md)
+Complete guide for:
+- Local development with Docker
+- Production deployment
+- Environment variable configuration
+- Database migrations
+- Backup and restore procedures
+
+#### [MODIFY] [README.md](file:///g:/Projects/Debug/Club%20Full%20Stack%20Project/README.md)
+Comprehensive project documentation:
+- Project overview and features
+- Quick start guide
+- Development setup
+- Docker deployment
+- Technologies used
+- Contributing guidelines
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+Unfortunately, there are no existing test files in the current project. Manual verification will be required.
+
+### Manual Verification Steps
+
+#### 1. **Forms Testing** (All CRUD Operations)
+```bash
+# Start development server
+cd frontend
+npm run dev
+```
+- Navigate to each list page (parents, age groups, sessions, fixtures, events, announcements)
+- Test CREATE: Click "+" button, fill form, submit, verify in database
+- Test UPDATE: Click edit icon, modify fields, submit, verify changes
+- Test DELETE: Click delete icon, confirm, verify removal
+- Verify form validation (try submitting with invalid data)
+- Check error messages display properly
+
+#### 2. **Calendar Functionality**
+- Visit `/teacher`, `/student`, `/parent` pages
+- Verify training sessions display correctly
+- Check week navigation works
+- Confirm times are accurate
+
+#### 3. **Docker Deployment**
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Verify application is accessible
+# Navigate to http://localhost:3000
+
+# Check database connection
+docker-compose logs postgres
+
+# Run migrations
+docker-compose exec app npx prisma migrate deploy
+
+# Seed database
+docker-compose exec app npx prisma db seed
+```
+
+#### 4. **Role-Based Access**
+- Test with different Clerk user roles (ADMIN, COACH, STUDENT, PARENT)
+- Verify navigation menu shows appropriate items
+- Confirm CRUD buttons only visible to admins
+- Test unauthorized access to protected pages
+
+#### 5. **Database Integrity**
+```bash
+# Open Prisma Studio
+npm run prisma studio
+
+# Verify:
+# - All relationships are correct
+# - Foreign keys work properly
+# - Cascade deletes function as expected
+# - Data types are correct
+```
+
+### Success Criteria
+
+- ✅ All forms submit successfully without errors
+- ✅ Data persists correctly in PostgreSQL
+- ✅ Calendar displays training sessions accurately
+- ✅ Docker containers start and communicate properly
+- ✅ Role-based permissions work correctly
+- ✅ No console errors or warnings
+- ✅ Responsive design works on mobile and desktop
+
+---
+
+## Implementation Phases
+
+**Phase 1**: Forms (Estimated: 4-6 hours)
+- Create all missing form components
+- Implement server actions
+- Update FormModal router
+
+**Phase 2**: Docker Setup (Estimated: 2-3 hours)
+- Create Dockerfile and docker-compose
+- Configure environment variables
+- Test local deployment
+
+**Phase 3**: Documentation (Estimated: 1-2 hours)
+- Write deployment guides
+- Update README
+- Create setup instructions
+
+**Phase 4**: Testing & Polish (Estimated: 2-3 hours)
+- Manual testing of all features
+- Bug fixes
+- UI/UX improvements
+
+**Total Estimated Time**: 9-14 hours

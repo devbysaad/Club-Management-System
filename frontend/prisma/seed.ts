@@ -129,25 +129,25 @@ async function main() {
   const positions = ["GK", "DEF", "MID", "FWD"];
   const players = [];
   const numberOfPlayers = Math.floor(Math.random() * 41) + 30; // Random 30–70
-  
+
   for (let i = 1; i <= numberOfPlayers; i++) {
     const suffix = Math.floor(Math.random() * 10000); // Unique email
     const displayId = `PLR${1000 + i}`; // Unique displayId
     const position = positions[Math.floor(Math.random() * positions.length)]; // Random position
-    
+
     // Get the age group for this player
     const ageGroup = ageGroups[i % ageGroups.length];
-    
+
     // Calculate a valid age within the age group range
     const playerAge = Math.floor(Math.random() * (ageGroup.maxAge - ageGroup.minAge + 1)) + ageGroup.minAge;
-    
+
     // Calculate date of birth based on the age (so current age matches the age group)
     const today = new Date();
     const birthYear = today.getFullYear() - playerAge;
     const birthMonth = Math.floor(Math.random() * 12); // Random month
     const birthDay = Math.floor(Math.random() * 28) + 1; // Random day (1-28 to avoid month issues)
     const dateOfBirth = new Date(birthYear, birthMonth, birthDay);
-  
+
     const playerUser = await prisma.user.create({
       data: {
         email: `player${i}_${suffix}@club.com`,
@@ -170,7 +170,7 @@ async function main() {
       },
       include: { student: true },
     });
-  
+
     players.push(playerUser.student!);
   }
 
@@ -313,7 +313,7 @@ async function main() {
   for (let i = 0; i < 10; i++) {
     const publishDate = new Date();
     publishDate.setDate(publishDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
-    
+
     const expiresDate = new Date(publishDate);
     expiresDate.setDate(expiresDate.getDate() + 30 + Math.floor(Math.random() * 30)); // Expires 30-60 days after publish
 

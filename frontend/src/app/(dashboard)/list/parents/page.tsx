@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
@@ -45,13 +45,17 @@ const ParentListPage = async ({
   const { coachId, page, search } = searchParams;
   const currentPage = page ? parseInt(page) : 1;
 
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   // Build query
   const query: any = {};
 
   // Add search functionality with improved multi-word search
   if (search) {
     const searchTerms = search.trim().split(/\s+/); // Split by whitespace
-    
+
     if (searchTerms.length === 1) {
       // Single word search - search in firstName, lastName, email, phone
       query.OR = [
@@ -84,7 +88,7 @@ const ParentListPage = async ({
       // Multi-word search - assume first word is firstName, rest is lastName
       const [firstTerm, ...restTerms] = searchTerms;
       const lastTerm = restTerms.join(" ");
-      
+
       query.OR = [
         // firstName contains first term AND lastName contains rest
         {
@@ -192,7 +196,7 @@ const ParentListPage = async ({
 
   const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
 
-  const renderRow = (item: Parent) => (
+  const renderRow = (item: Parent, role?: string) => (
     <tr
       key={item.id}
       className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
@@ -281,7 +285,7 @@ const ParentListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={parentsData} />
+      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={parentsData} />
       {/* PAGINATION */}
       <Pagination totalPages={totalPages} />
     </div>
