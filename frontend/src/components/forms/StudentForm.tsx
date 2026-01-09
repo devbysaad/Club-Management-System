@@ -6,7 +6,7 @@ import InputField from "../InputField";
 import { studentSchema, StudentSchema } from "@/lib/formValidationSchemas";
 import { createStudent, updateStudent } from "@/lib/actions";
 import { useFormState } from "react-dom";
-import { useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
@@ -21,7 +21,7 @@ const StudentForm = ({
   data?: any;
   ageGroups?: any[];
   parents?: any[];
-  setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen?: Dispatch<SetStateAction<boolean>>;
 }) => {
   const {
     register,

@@ -11,26 +11,12 @@ const LoginPage = () => {
     const { isLoaded, isSignedIn, user } = useUser();
     const router = useRouter();
 
+    // If already signed in, redirect to admin immediately
     useEffect(() => {
-        if (!isLoaded || !isSignedIn) return;
-
-        const role = user?.publicMetadata?.role;
-
-        if (role) {
-            const roleRoutes: Record<string, string> = {
-                admin: "/admin",
-                teacher: "/list/teachers",
-                student: "/admin",
-                parent: "/admin",
-            };
-
-            const targetRoute = roleRoutes[role as string] || "/admin";
-            router.replace(targetRoute);
-        } else {
-            // Default fallback if role is not yet set or missing
-            router.replace("/admin");
+        if (isLoaded && isSignedIn) {
+            router.push("/admin");
         }
-    }, [user, router, isLoaded, isSignedIn]);
+    }, [isLoaded, isSignedIn, router]);
 
     return (
         <div className="min-h-screen flex bg-[var(--bg-primary)]">

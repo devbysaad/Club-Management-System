@@ -178,12 +178,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                         </div>
 
                         <div className="relative">
-                            <div className="aspect-square rounded-2xl bg-gradient-to-br from-rmBlue/5 to-[var(--bg-surface-light)] flex items-center justify-center overflow-hidden shadow-2xl border border-[var(--border-color)]">
-                                <div className="text-center">
-                                    <div className="text-9xl mb-4">⚽</div>
-                                    <p className="text-[var(--text-secondary)] font-medium">Excellence in Football</p>
-                                </div>
-                            </div>
+                            <Image src="/patoAssets/patoCover.jpg" alt="" width={500} height={500} className="rounded-lg" />
                             {/* Floating Stats */}
                             <div className="absolute -bottom-6 -left-6 bg-[var(--bg-surface)] rounded-xl shadow-lg p-6 border border-[var(--border-color)]">
                                 <div className="text-3xl font-bold text-rmBlue">{data?.stats.students || 100}+</div>
@@ -217,10 +212,18 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                 <div className="max-w-7xl mx-auto">
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div className="order-2 md:order-1">
-                            <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-[var(--bg-surface-light)] to-rmBlue/5 flex items-center justify-center shadow-xl border border-[var(--border-color)]">
-                                <span className="text-8xl">🏆</span>
+                            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-white flex items-center justify-center shadow-xl border border-[var(--border-color)]">
+                                <video
+                                    className="w-full h-full object-cover"
+                                    src="/patoAssets/patoVideo.mp4"
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                />
                             </div>
                         </div>
+
 
                         <div className="order-1 md:order-2">
                             <span className="text-rmBlue uppercase tracking-wider text-sm font-bold">About Us</span>
