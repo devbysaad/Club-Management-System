@@ -2,52 +2,67 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import InputField from "../InputField";
-import Image from "next/image";
-
-const schema = z.object({
-  username: z
-    .string()
-    .min(3, { message: "Username must be at least 3 characters long!" })
-    .max(20, { message: "Username must be at most 20 characters long!" }),
-  email: z.string().email({ message: "Invalid email address!" }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters long!" }),
-  firstName: z.string().min(1, { message: "First name is required!" }),
-  lastName: z.string().min(1, { message: "Last name is required!" }),
-  phone: z.string().min(1, { message: "Phone is required!" }),
-  address: z.string().min(1, { message: "Address is required!" }),
-  bloodType: z.string().min(1, { message: "Blood Type is required!" }),
-  birthday: z.date({ message: "Birthday is required!" }),
-  sex: z.enum(["male", "female"], { message: "Sex is required!" }),
-  img: z.instanceof(File, { message: "Image is required" }),
-});
-
-type Inputs = z.infer<typeof schema>;
+import { studentSchema, StudentSchema } from "@/lib/formValidationSchemas";
+import { createStudent, updateStudent } from "@/lib/actions";
+import { useFormState } from "react-dom";
+import { useEffect } from "react";
+import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 const StudentForm = ({
   type,
   data,
+  ageGroups,
+  parents,
+  setOpen,
 }: {
   type: "create" | "update";
   data?: any;
+  ageGroups?: any[];
+  parents?: any[];
+  setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<Inputs>({
-    resolver: zodResolver(schema),
+  } = useForm<StudentSchema>({
+    resolver: zodResolver(studentSchema),
   });
 
+  const [state, formAction] = useFormState(
+    type === "create" ? createStudent : updateStudent,
+    {
+      success: false,
+      error: false,
+    }
+  );
+
+  const router = useRouter();
+
   const onSubmit = handleSubmit((data) => {
-    console.log(data);
+    formAction(data);
   });
+
+  useEffect(() => {
+    if (state.success) {
+      toast.success(`Player has been ${type === "create" ? "created" : "updated"}!`);
+      setTimeout(() => {
+        setOpen?.(false);
+        router.refresh();
+      }, 500);
+    } else if (state.error) {
+      toast.error("Something went wrong! Please check your inputs.");
+    }
+  }, [state, router, type, setOpen]);
 
   return (
     <form className="flex flex-col gap-6 p-6" onSubmit={onSubmit}>
+      <h1 className="text-xl font-semibold">
+        {type === "create" ? "Create a new player" : "Update the player"}
+      </h1>
+
       {/* Section: Account Info */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
@@ -128,14 +143,13 @@ const StudentForm = ({
           />
           <InputField
             label="Birthday"
-            name="birthday"
-            defaultValue={data?.birthday}
-            register={register}
-            error={errors.birthday}
+            name="dateOfBirth"
             type="date"
+            defaultValue={data?.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : ""}
+            register={register}
+            error={errors.dateOfBirth}
           />
 
-          {/* Sex Select */}
           <div className="flex flex-col gap-2">
             <label className="text-xs text-[var(--text-muted)] font-medium">Gender</label>
             <select
@@ -144,40 +158,84 @@ const StudentForm = ({
               defaultValue={data?.sex}
             >
               <option value="">Select gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
             </select>
             {errors.sex?.message && (
-              <p className="text-xs text-fcGarnet flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                {errors.sex.message.toString()}
-              </p>
+              <p className="text-xs text-fcGarnet">{errors.sex.message.toString()}</p>
             )}
           </div>
 
-          {/* Photo Upload */}
+          <InputField
+            label="Position"
+            name="position"
+            defaultValue={data?.position}
+            register={register}
+            error={errors.position}
+          />
+          <InputField
+            label="Jersey Number"
+            name="jerseyNumber"
+            type="number"
+            defaultValue={data?.jerseyNumber}
+            register={register}
+            error={errors.jerseyNumber}
+          />
+          <InputField
+            label="Display ID"
+            name="displayId"
+            defaultValue={data?.displayId}
+            register={register}
+            error={errors.displayId}
+          />
+
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-[var(--text-muted)] font-medium">Profile Photo</label>
-            <label
-              className="flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed border-[var(--border-color)] hover:border-fcGarnet/50 bg-[var(--bg-surface)] cursor-pointer transition-all group min-h-[46px]"
-              htmlFor="playerImg"
+            <label className="text-xs text-[var(--text-muted)] font-medium">Age Group</label>
+            <select
+              className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl p-3 text-sm text-[var(--text-primary)] focus:border-fcGarnet focus:outline-none focus:ring-2 focus:ring-fcGarnet/20 transition-all min-h-[46px]"
+              {...register("ageGroupId")}
+              defaultValue={data?.ageGroupId}
             >
-              <svg className="w-6 h-6 text-[var(--text-dim)] group-hover:text-fcGarnet transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-sm text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
-                Upload photo
-              </span>
-            </label>
-            <input type="file" id="playerImg" {...register("img")} className="hidden" />
-            {errors.img?.message && (
-              <p className="text-xs text-fcGarnet">{errors.img.message.toString()}</p>
+              <option value="">Select age group</option>
+              {ageGroups?.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            {errors.ageGroupId?.message && (
+              <p className="text-xs text-fcGarnet">{errors.ageGroupId.message.toString()}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-[var(--text-muted)] font-medium">Parent</label>
+            <select
+              className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl p-3 text-sm text-[var(--text-primary)] focus:border-fcGarnet focus:outline-none focus:ring-2 focus:ring-fcGarnet/20 transition-all min-h-[46px]"
+              {...register("parentId")}
+              defaultValue={data?.parentId}
+            >
+              <option value="">Select parent</option>
+              {parents?.map((parent) => (
+                <option key={parent.id} value={parent.id}>
+                  {parent.firstName} {parent.lastName}
+                </option>
+              ))}
+            </select>
+            {errors.parentId?.message && (
+              <p className="text-xs text-fcGarnet">{errors.parentId.message.toString()}</p>
             )}
           </div>
         </div>
       </div>
+
+      {/* Hidden Fields for Updates */}
+      {data && (
+        <>
+          <input type="hidden" {...register("id")} defaultValue={data?.id} />
+          <input type="hidden" {...register("userId")} defaultValue={data?.userId} />
+        </>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-light)]">
@@ -185,21 +243,7 @@ const StudentForm = ({
           type="submit"
           className="px-8 py-3 rounded-xl bg-gradient-to-r from-fcGarnet to-fcGarnetLight text-white font-heading font-semibold shadow-glow-garnet hover:opacity-90 hover:scale-[1.02] transition-all flex items-center gap-2"
         >
-          {type === "create" ? (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Player
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Update Player
-            </>
-          )}
+          {type === "create" ? "Add Player" : "Update Player"}
         </button>
       </div>
     </form>

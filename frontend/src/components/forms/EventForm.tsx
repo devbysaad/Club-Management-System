@@ -13,9 +13,11 @@ import { useRouter } from "next/navigation";
 const EventForm = ({
     type,
     data,
+    setOpen,
 }: {
     type: "create" | "update";
     data?: any;
+    setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
     const {
         register,
@@ -41,17 +43,22 @@ const EventForm = ({
 
     useEffect(() => {
         if (state.success) {
-            toast(`Event has been ${type === "create" ? "created" : "updated"}!`);
-            router.push("/list/events");
-            router.refresh();
+            toast.success(`Event has been ${type === "create" ? "created" : "updated"}!`);
+            setTimeout(() => {
+                setOpen?.(false);
+                router.refresh();
+            }, 500);
+        } else if (state.error) {
+            toast.error("Something went wrong! Please check your inputs.");
         }
-    }, [state, router, type]);
+    }, [state, router, type, setOpen]);
 
     return (
         <form className="flex flex-col gap-6 p-6" onSubmit={onSubmit}>
-            {state.error && (
-                <span className="text-fcGarnet">Something went wrong!</span>
-            )}
+            <h1 className="text-xl font-semibold">
+                {type === "create" ? "Create a new event" : "Update the event"}
+            </h1>
+
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <div className="w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-full" />
@@ -90,7 +97,7 @@ const EventForm = ({
                         label="Date"
                         name="date"
                         type="datetime-local"
-                        defaultValue={data?.date}
+                        defaultValue={data?.date ? new Date(data.date).toISOString().slice(0, 16) : ""}
                         register={register}
                         error={errors.date}
                     />
@@ -105,7 +112,7 @@ const EventForm = ({
                         label="Start Time"
                         name="startTime"
                         type="datetime-local"
-                        defaultValue={data?.startTime}
+                        defaultValue={data?.startTime ? new Date(data.startTime).toISOString().slice(0, 16) : ""}
                         register={register}
                         error={errors.startTime}
                     />
@@ -113,7 +120,7 @@ const EventForm = ({
                         label="End Time"
                         name="endTime"
                         type="datetime-local"
-                        defaultValue={data?.endTime}
+                        defaultValue={data?.endTime ? new Date(data.endTime).toISOString().slice(0, 16) : ""}
                         register={register}
                         error={errors.endTime}
                     />
@@ -129,14 +136,7 @@ const EventForm = ({
             </div>
 
             {data && (
-                <InputField
-                    label="Id"
-                    name="id"
-                    defaultValue={data?.id}
-                    register={register}
-                    error={errors?.id}
-                    hidden
-                />
+                <input type="hidden" {...register("id")} defaultValue={data?.id} />
             )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-light)]">

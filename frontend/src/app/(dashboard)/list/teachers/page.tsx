@@ -57,7 +57,11 @@ const columns = [
 ];
 
 
-const renderRow = (item: CoachList, role?: string) => (
+const renderRow = (
+  item: CoachList,
+  role?: string,
+  relatedData?: { ageGroups: any[] }
+) => (
   <tr
     key={item.id}
     className="border-b border-fcBorder hover:bg-fcSurfaceLight/50 text-sm transition-colors"
@@ -119,7 +123,15 @@ const renderRow = (item: CoachList, role?: string) => (
           </button>
         </Link>
         {role === "admin" && (
-          <FormModal table="teacher" type="delete" id={item.id} />
+          <>
+            <FormModal
+              table="teacher"
+              type="update"
+              data={item}
+              relatedData={relatedData}
+            />
+            <FormModal table="teacher" type="delete" id={item.id} />
+          </>
         )}
       </div>
     </td>
@@ -262,8 +274,8 @@ const CoachListPage = async ({
     }
   }
 
-  // Fetch coaches with pagination
-  const [data, count] = await prisma.$transaction([
+  // Fetch coaches and age groups
+  const [data, count, ageGroups] = await prisma.$transaction([
     prisma.coach.findMany({
       where: query,
       include: {
@@ -280,6 +292,7 @@ const CoachListPage = async ({
       },
     }),
     prisma.coach.count({ where: query }),
+    prisma.ageGroup.findMany({ select: { id: true, name: true } }),
   ]);
 
 
@@ -287,6 +300,9 @@ const CoachListPage = async ({
   // Transform data for rendering
   const coachesData = data.map((coach) => ({
     id: coach.id,
+    userId: coach.userId,
+    firstName: coach.firstName,
+    lastName: coach.lastName,
     name: `${coach.firstName} ${coach.lastName}`,
     email: coach.email,
     photo: coach.photo,
@@ -295,7 +311,11 @@ const CoachListPage = async ({
     ageGroups: coach.ageGroups,
     phone: coach.phone,
     address: coach.address,
+    sex: coach.sex,
+    bloodType: coach.bloodType,
   }));
+
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
 
   return (
     <div className="glass-card rounded-2xl flex-1 m-4 mt-0 p-6">
@@ -312,6 +332,7 @@ const CoachListPage = async ({
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-2">
+            {/* ... (buttons) */}
             <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/50 transition-colors">
               <svg className="w-4 h-4 text-fcTextMuted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -322,14 +343,24 @@ const CoachListPage = async ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
             </button>
-            {role === "admin" && <FormModal table="teacher" type="create" />}
+            {role === "admin" && (
+              <FormModal
+                table="teacher"
+                type="create"
+                relatedData={{ ageGroups }}
+              />
+            )}
           </div>
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={(item) => renderRow(item, role)} data={coachesData} />
+      <Table
+        columns={columns}
+        renderRow={(item) => renderRow(item, role, { ageGroups })}
+        data={coachesData}
+      />
       {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <Pagination totalPages={totalPages} />
     </div>
   );
 };

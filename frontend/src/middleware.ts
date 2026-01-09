@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 const publicRoutes = createRouteMatcher([
   "/",
   "/about",
+  "/admission",
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);

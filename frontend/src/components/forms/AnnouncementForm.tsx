@@ -13,9 +13,11 @@ import { useRouter } from "next/navigation";
 const AnnouncementForm = ({
     type,
     data,
+    setOpen,
 }: {
     type: "create" | "update";
     data?: any;
+    setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
     const {
         register,
@@ -41,17 +43,22 @@ const AnnouncementForm = ({
 
     useEffect(() => {
         if (state.success) {
-            toast(`Announcement has been ${type === "create" ? "created" : "updated"}!`);
-            router.push("/list/announcements");
-            router.refresh();
+            toast.success(`Announcement has been ${type === "create" ? "created" : "updated"}!`);
+            setTimeout(() => {
+                setOpen?.(false);
+                router.refresh();
+            }, 500);
+        } else if (state.error) {
+            toast.error("Something went wrong! Please check your inputs.");
         }
-    }, [state, router, type]);
+    }, [state, router, type, setOpen]);
 
     return (
         <form className="flex flex-col gap-6 p-6" onSubmit={onSubmit}>
-            {state.error && (
-                <span className="text-fcGarnet">Something went wrong!</span>
-            )}
+            <h1 className="text-xl font-semibold">
+                {type === "create" ? "Create a new announcement" : "Update the announcement"}
+            </h1>
+
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <div className="w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-full" />
@@ -92,7 +99,7 @@ const AnnouncementForm = ({
                             label="Expires At"
                             name="expiresAt"
                             type="datetime-local"
-                            defaultValue={data?.expiresAt}
+                            defaultValue={data?.expiresAt ? new Date(data.expiresAt).toISOString().slice(0, 16) : ""}
                             register={register}
                             error={errors.expiresAt}
                         />
@@ -101,13 +108,13 @@ const AnnouncementForm = ({
                         <label className="text-xs text-[var(--text-muted)] font-medium">Target Roles</label>
                         <div className="flex gap-4">
                             {["ADMIN", "COACH", "STUDENT", "PARENT"].map((role) => (
-                                <label key={role} className="flex items-center gap-2">
+                                <label key={role} className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         value={role}
                                         {...register("targetRoles")}
                                         defaultChecked={data?.targetRoles?.includes(role)}
-                                        className="w-4 h-4 text-fcGarnet"
+                                        className="w-4 h-4 rounded border-gray-300 text-fcGarnet focus:ring-fcGarnet"
                                     />
                                     <span className="text-sm">{role}</span>
                                 </label>
@@ -121,14 +128,7 @@ const AnnouncementForm = ({
             </div>
 
             {data && (
-                <InputField
-                    label="Id"
-                    name="id"
-                    defaultValue={data?.id}
-                    register={register}
-                    error={errors?.id}
-                    hidden
-                />
+                <input type="hidden" {...register("id")} defaultValue={data?.id} />
             )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-light)]">

@@ -13,9 +13,11 @@ import { useRouter } from "next/navigation";
 const ParentForm = ({
     type,
     data,
+    setOpen,
 }: {
     type: "create" | "update";
     data?: any;
+    setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
     const {
         register,
@@ -41,22 +43,62 @@ const ParentForm = ({
 
     useEffect(() => {
         if (state.success) {
-            toast(`Parent has been ${type === "create" ? "created" : "updated"}!`);
-            router.push("/list/parents");
-            router.refresh();
+            toast.success(`Parent has been ${type === "create" ? "created" : "updated"}!`);
+            setTimeout(() => {
+                setOpen?.(false);
+                router.refresh();
+            }, 500);
+        } else if (state.error) {
+            toast.error("Something went wrong! Please check your inputs.");
         }
-    }, [state, router, type]);
+    }, [state, router, type, setOpen]);
 
     return (
         <form className="flex flex-col gap-6 p-6" onSubmit={onSubmit}>
-            {state.error && (
-                <span className="text-fcGarnet">Something went wrong!</span>
-            )}
+            <h1 className="text-xl font-semibold">
+                {type === "create" ? "Create a new parent" : "Update the parent"}
+            </h1>
+
+            {/* Section: Account Info */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <div className="w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-full" />
                     <span className="text-xs text-fcGold font-heading font-semibold uppercase tracking-wider">
-                        Parent Information
+                        Account Information
+                    </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <InputField
+                        label="Username"
+                        name="username"
+                        defaultValue={data?.username}
+                        register={register}
+                        error={errors?.username}
+                    />
+                    <InputField
+                        label="Email"
+                        name="email"
+                        defaultValue={data?.email}
+                        register={register}
+                        error={errors?.email}
+                    />
+                    <InputField
+                        label="Password"
+                        name="password"
+                        type="password"
+                        defaultValue={data?.password}
+                        register={register}
+                        error={errors?.password}
+                    />
+                </div>
+            </div>
+
+            {/* Section: Personal Info */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="w-1 h-5 bg-gradient-to-b from-fcBlue to-fcGold rounded-full" />
+                    <span className="text-xs text-fcGold font-heading font-semibold uppercase tracking-wider">
+                        Personal Information
                     </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -73,13 +115,6 @@ const ParentForm = ({
                         defaultValue={data?.lastName}
                         register={register}
                         error={errors.lastName}
-                    />
-                    <InputField
-                        label="Email"
-                        name="email"
-                        defaultValue={data?.email}
-                        register={register}
-                        error={errors.email}
                     />
                     <InputField
                         label="Phone"
@@ -99,27 +134,15 @@ const ParentForm = ({
                 </div>
             </div>
 
+            {/* Hidden Fields for Updates */}
             {data && (
-                <InputField
-                    label="Id"
-                    name="id"
-                    defaultValue={data?.id}
-                    register={register}
-                    error={errors?.id}
-                    hidden
-                />
-            )}
-            {data && (
-                <InputField
-                    label="User Id"
-                    name="userId"
-                    defaultValue={data?.userId}
-                    register={register}
-                    error={errors?.userId}
-                    hidden
-                />
+                <>
+                    <input type="hidden" {...register("id")} defaultValue={data?.id} />
+                    <input type="hidden" {...register("userId")} defaultValue={data?.userId} />
+                </>
             )}
 
+            {/* Submit Button */}
             <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-light)]">
                 <button
                     type="submit"

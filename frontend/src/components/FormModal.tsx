@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 // =========================
 // LOADER COMPONENT
@@ -39,18 +39,48 @@ const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), { loading
 // =========================
 // FORMS MAPPING
 // =========================
-const forms: Record<string, (type: "create" | "update", data?: any) => JSX.Element> = {
-  teacher: (type, data) => <TeacherForm type={type} data={data} />,
-  student: (type, data) => <StudentForm type={type} data={data} />,
-  parent: (type, data) => <ParentForm type={type} data={data} />,
-  ageGroup: (type, data) => <AgeGroupForm type={type} data={data} />,
-  class: (type, data) => <AgeGroupForm type={type} data={data} />,
-  lesson: (type, data) => <TrainingSessionForm type={type} data={data} />,
-  exam: (type, data) => <FixtureForm type={type} data={data} />,
-  result: (type, data) => <ResultForm type={type} data={data} />,
-  attendance: (type, data) => <AttendanceForm type={type} data={data} />,
-  event: (type, data) => <EventForm type={type} data={data} />,
-  announcement: (type, data) => <AnnouncementForm type={type} data={data} />,
+const forms: Record<
+  string,
+  (
+    type: "create" | "update",
+    data?: any,
+    relatedData?: any,
+    setOpen?: Dispatch<SetStateAction<boolean>>
+  ) => JSX.Element
+> = {
+  teacher: (type, data, relatedData, setOpen) => (
+    <TeacherForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  student: (type, data, relatedData, setOpen) => (
+    <StudentForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  parent: (type, data, relatedData, setOpen) => (
+    <ParentForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  ageGroup: (type, data, relatedData, setOpen) => (
+    <AgeGroupForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  class: (type, data, relatedData, setOpen) => (
+    <AgeGroupForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  lesson: (type, data, relatedData, setOpen) => (
+    <TrainingSessionForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  exam: (type, data, relatedData, setOpen) => (
+    <FixtureForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  result: (type, data, relatedData, setOpen) => (
+    <ResultForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  attendance: (type, data, relatedData, setOpen) => (
+    <AttendanceForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  event: (type, data, relatedData, setOpen) => (
+    <EventForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  announcement: (type, data, relatedData, setOpen) => (
+    <AnnouncementForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
 };
 
 // =========================
@@ -79,11 +109,13 @@ const FormModal = ({
   type,
   data,
   id,
+  relatedData,
 }: {
   table: keyof typeof displayNames;
   type: "create" | "update" | "delete";
   data?: any;
-  id?: number | string
+  id?: number | string;
+  relatedData?: any;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -138,7 +170,7 @@ const FormModal = ({
       );
     }
 
-    if (forms[table]) return forms[table](type, data);
+    if (forms[table]) return forms[table](type, data, relatedData, setOpen);
 
     return (
       <div className="p-8 text-center text-[var(--text-muted)]">

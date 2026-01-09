@@ -31,7 +31,12 @@ const positionColors: Record<string, string> = {
   FWD: "bg-fcGarnet/20 text-fcGarnet",
 };
 
-const renderRow = (item: Player, index: number, role?: string) => {
+const renderRow = (
+  item: Player,
+  index: number,
+  role?: string,
+  relatedData?: { parents: any[]; ageGroups: any[] }
+) => {
   const position = item.position || "N/A";
   const squad = item.ageGroup?.name || "Academy";
 
@@ -118,7 +123,15 @@ const renderRow = (item: Player, index: number, role?: string) => {
           </Link>
 
           {role === "admin" && (
-            <FormModal table="student" type="delete" id={item.id} />
+            <>
+              <FormModal
+                table="student"
+                type="update"
+                data={item}
+                relatedData={relatedData}
+              />
+              <FormModal table="student" type="delete" id={item.id} />
+            </>
           )}
         </div>
       </td>
@@ -267,7 +280,7 @@ const PlayerListPage = async ({
     where.ageGroupId = ageGroupId;
   }
 
-  const [students, totalCount] = await prisma.$transaction([
+  const [students, totalCount, parents, ageGroups] = await prisma.$transaction([
     prisma.student.findMany({
       where,
       include: { ageGroup: true },
@@ -276,6 +289,8 @@ const PlayerListPage = async ({
       orderBy: { createdAt: "desc" },
     }),
     prisma.student.count({ where }),
+    prisma.parent.findMany({ select: { id: true, firstName: true, lastName: true } }),
+    prisma.ageGroup.findMany({ select: { id: true, name: true } }),
   ]);
 
   const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
@@ -297,7 +312,13 @@ const PlayerListPage = async ({
           <TableSearch />
 
           <div className="flex items-center gap-2">
-            {role === "admin" && <FormModal table="student" type="create" />}
+            {role === "admin" && (
+              <FormModal
+                table="student"
+                type="create"
+                relatedData={{ parents, ageGroups }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -306,7 +327,14 @@ const PlayerListPage = async ({
       <Table
         columns={columns}
         data={students}
-        renderRow={(item, idx) => renderRow(item as Player, idx, role)}
+        renderRow={(item) =>
+          renderRow(
+            item as Player,
+            students.indexOf(item),
+            role,
+            { parents, ageGroups }
+          )
+        }
       />
 
       {/* PAGINATION */}

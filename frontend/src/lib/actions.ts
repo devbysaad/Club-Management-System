@@ -27,6 +27,8 @@ export const createCoach = async (
 ) => {
     try {
         const user = await clerkClient.users.createUser({
+            username: data.username,
+            password: data.password,
             firstName: data.firstName,
             lastName: data.lastName,
             publicMetadata: { role: "coach" },
@@ -138,6 +140,8 @@ export const createStudent = async (
         }
 
         const user = await clerkClient.users.createUser({
+            username: data.username,
+            password: data.password,
             firstName: data.firstName,
             lastName: data.lastName,
             publicMetadata: { role: "student" },
@@ -248,6 +252,8 @@ export const createParent = async (
 ) => {
     try {
         const user = await clerkClient.users.createUser({
+            username: data.username,
+            password: data.password,
             firstName: data.firstName,
             lastName: data.lastName,
             publicMetadata: { role: "parent" },

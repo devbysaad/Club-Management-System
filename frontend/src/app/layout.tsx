@@ -4,6 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { ClerkProvider } from "@clerk/nextjs";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" });
 
@@ -23,10 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${montserrat.variable} font-sans antialiased`}>
-      <ClerkProvider>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <ClerkProvider>
+          <ThemeProvider>
+            {children}
+            <ToastContainer position="bottom-right" theme="dark" />
+          </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>

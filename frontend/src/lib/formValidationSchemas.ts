@@ -7,6 +7,15 @@ export const coachSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
     displayId: z.string().optional(),
+    username: z
+        .string()
+        .min(3, { message: "Username must be at least 3 characters long!" })
+        .max(20, { message: "Username must be at most 20 characters long!" }),
+    password: z
+        .string()
+        .min(8, { message: "Password must be at least 8 characters long!" })
+        .optional()
+        .or(z.literal("")),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z
@@ -32,6 +41,15 @@ export const studentSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
     displayId: z.string().optional(),
+    username: z
+        .string()
+        .min(3, { message: "Username must be at least 3 characters long!" })
+        .max(20, { message: "Username must be at most 20 characters long!" }),
+    password: z
+        .string()
+        .min(8, { message: "Password must be at least 8 characters long!" })
+        .optional()
+        .or(z.literal("")),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z
@@ -59,6 +77,15 @@ export type StudentSchema = z.infer<typeof studentSchema>;
 export const parentSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
+    username: z
+        .string()
+        .min(3, { message: "Username must be at least 3 characters long!" })
+        .max(20, { message: "Username must be at most 20 characters long!" }),
+    password: z
+        .string()
+        .min(8, { message: "Password must be at least 8 characters long!" })
+        .optional()
+        .or(z.literal("")),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z

@@ -317,3 +317,31 @@ enum OrderStatus {
   COMPLETED
   CANCELLED
 }
+
+/// =============
+/// ADMISSIONS
+/// =============
+model Admission {
+  id           String          @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String
+  phone        String
+  dateOfBirth  DateTime
+  sex          Sex
+  address      String
+  parentName   String
+  parentPhone  String
+  position     String?         // Preferred playing position
+  notes        String?         // Additional information
+  status       AdmissionStatus @default(PENDING)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+enum AdmissionStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+}

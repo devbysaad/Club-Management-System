@@ -168,7 +168,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <a href="#contact" className="px-8 py-4 rounded-lg bg-rmBlue text-white font-semibold text-center hover:bg-rmBlueDark transition-all shadow-md hover:shadow-lg">
+                                <a href="/admission" className="px-8 py-4 rounded-lg bg-rmBlue text-white font-semibold text-center hover:bg-rmBlueDark transition-all shadow-md hover:shadow-lg">
                                     Join Academy
                                 </a>
                                 <a href="#programs" className="px-8 py-4 rounded-lg border-2 border-[var(--border-color)] text-[var(--text-primary)] font-semibold text-center hover:border-rmBlue hover:text-rmBlue transition-all">
