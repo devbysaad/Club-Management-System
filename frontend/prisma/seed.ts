@@ -18,6 +18,7 @@ async function main() {
   await prisma.ageGroup.deleteMany();
   await prisma.event.deleteMany();
   await prisma.announcement.deleteMany();
+  await prisma.order.deleteMany();
   await prisma.user.deleteMany();
 
   console.log("✅ Database cleared!");
@@ -329,6 +330,58 @@ async function main() {
     });
   }
 
+  // Jersey Orders
+  console.log("Creating jersey orders...");
+  const orderStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+  const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  const sockSizes = ["S", "M", "L"];
+  const jerseyNames = ["SMITH", "JOHNSON", "WILLIAMS", "BROWN", "JONES", "GARCIA", "MILLER", "DAVIS"];
+
+  // Create some orders from different users (admins, parents, students)
+  const allUsers = [
+    { userId: "user_2abc123", name: "John Smith", email: "john.smith@example.com", phone: "555-1234" },
+    { userId: "user_2def456", name: "Sarah Johnson", email: "sarah.j@example.com", phone: "555-5678" },
+    ...parents.slice(0, 5).map((p, i) => ({
+      userId: `user_parent_${i}`,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
+      phone: p.phone || "555-0000"
+    })),
+    ...players.slice(0, 3).map((p, i) => ({
+      userId: `user_player_${i}`,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
+      phone: "555-9999"
+    }))
+  ];
+
+  for (let i = 0; i < 12; i++) {
+    const user = allUsers[i % allUsers.length];
+    const hasCustomMeasurements = i % 3 === 0; // Every 3rd order has custom measurements
+
+    const orderDate = new Date();
+    orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
+
+    await prisma.order.create({
+      data: {
+        userId: user.userId,
+        customerName: user.name,
+        contactNumber: user.phone,
+        email: user.email,
+        shirtSize: sizes[Math.floor(Math.random() * sizes.length)],
+        shortsSize: sizes[Math.floor(Math.random() * sizes.length)],
+        socksSize: sockSizes[Math.floor(Math.random() * sockSizes.length)],
+        jerseyName: jerseyNames[i % jerseyNames.length],
+        jerseyNumber: Math.floor(Math.random() * 99) + 1,
+        customLength: hasCustomMeasurements ? `${65 + Math.floor(Math.random() * 20)}` : null,
+        customWidth: hasCustomMeasurements ? `${45 + Math.floor(Math.random() * 15)}` : null,
+        customNotes: hasCustomMeasurements ? "Please ensure sleeves are slightly longer. Athletic fit preferred." : null,
+        status: orderStatuses[i % orderStatuses.length],
+        createdAt: orderDate,
+      },
+    });
+  }
+
   console.log("✅ Football club seeding completed successfully!");
   console.log(`
 📊 Summary:
@@ -341,6 +394,7 @@ async function main() {
 - Fixtures: 10
 - Events: 5
 - Announcements: 10
+- Jersey Orders: 12
   `);
 }
 
