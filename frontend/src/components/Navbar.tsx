@@ -18,7 +18,7 @@ const Navbar = () => {
   return (
     <div className="flex items-center justify-between p-4 bg-[var(--bg-sidebar)] border-b border-[var(--border-color)] sticky top-0 z-40 backdrop-blur-sm">
       {/* SEARCH BAR */}
-      <div className="hidden md:flex items-center gap-3 text-sm rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] px-4 py-2.5 focus-within:border-fcGarnet/50 focus-within:shadow-glow-garnet transition-all duration-300 w-[320px]">
+      <div className="hidden md:flex items-center gap-3 text-sm rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] px-4 py-2.5 focus-within:border-rmBlue focus-within:ring-2 focus-within:ring-rmBlue/10 transition-all duration-200 w-[320px]">
         <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
@@ -49,11 +49,11 @@ const Navbar = () => {
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? (
-            <svg className="w-5 h-5 text-fcGold transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-rmGold transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           ) : (
-            <svg className="w-5 h-5 text-fcBlue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-rmBlue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
           )}
@@ -69,19 +69,19 @@ const Navbar = () => {
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--bg-surface)] transition-all duration-300 cursor-pointer group">
           {/* Name + Role */}
           <div className="flex flex-col text-right pr-2">
-            <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-fcGold transition-colors">
+            <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-rmBlue transition-colors">
               {/* User name comes from Clerk automatically in UserButton */}
               <UserButton
                 showName={true}
                 appearance={{
                   elements: {
-                    userButtonText: "text-sm font-semibold text-[var(--text-primary)] group-hover:text-fcGold",
+                    userButtonText: "text-sm font-semibold text-[var(--text-primary)] group-hover:text-rmBlue",
                   },
                 }}
               />
             </span>
             <span className="text-[11px] text-[var(--text-muted)] flex items-center justify-end gap-1">
-              <span className="w-1.5 h-1.5 bg-fcGold rounded-full" />
+              <span className="w-1.5 h-1.5 bg-rmBlue rounded-full" />
               {isLoaded && role ? roleLabels[role] : "Loading..."}
             </span>
           </div>

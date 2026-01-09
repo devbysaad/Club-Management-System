@@ -110,8 +110,8 @@ const menuItems = [
       },
       {
         icon: "/setting.png",
-        label: "Settings",
-        href: "/settings",
+        label: "About",
+        href: "/about",
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
@@ -175,15 +175,15 @@ const Menu = () => {
                       flex items-center justify-center lg:justify-start gap-3 
                       py-2.5 px-2 lg:px-3 rounded-xl transition-all duration-200 group relative
                       ${isActive
-                        ? "bg-gradient-to-r from-fcGarnet/20 to-fcBlue/10 text-[var(--text-primary)]"
-                        : "text-[var(--text-muted)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+                        ? "bg-rmBlue/10 text-[var(--text-primary)] border-l-3 border-rmBlue"
+                        : "text-[var(--text-muted)] hover:bg-[var(--bg-surface-light)] hover:text-[var(--text-primary)]"
                       }
                     `}
                     title={item.label}
                   >
                     {/* Active Indicator */}
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-fcGarnet to-fcBlue rounded-r-full" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-rmBlue rounded-r-full" />
                     )}
 
                     {/* Icon */}

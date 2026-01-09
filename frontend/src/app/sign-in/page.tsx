@@ -5,131 +5,184 @@ import * as SignIn from "@clerk/elements/sign-in";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Link from "next/link";
 
 const LoginPage = () => {
     const { isLoaded, isSignedIn, user } = useUser();
     const router = useRouter();
 
     useEffect(() => {
-        console.log(" SIGN-IN PAGE useEffect triggered");
-        console.log("  isLoaded:", isLoaded);
-        console.log("  isSignedIn:", isSignedIn);
-
-        if (!isLoaded || !isSignedIn) {
-            console.log("  ⏸️ Waiting for auth to load...");
-            return;
-        }
+        if (!isLoaded || !isSignedIn) return;
 
         const role = user?.publicMetadata?.role;
-        console.log("   User role from publicMetadata:", role);
-        console.log("   Full publicMetadata:", user?.publicMetadata);
 
         if (role) {
-            // Role-based redirect after login
             const roleRoutes: Record<string, string> = {
                 admin: "/admin",
                 teacher: "/list/teachers",
-                student: "/admin", // Students redirect to admin (dashboard) since they can't access /list/students
-                parent: "/admin", // Parents redirect to admin (dashboard) since they can't access /list/parents
+                student: "/admin",
+                parent: "/admin",
             };
 
-            const targetRoute = roleRoutes[role as string];
-            console.log("   Target route for role:", targetRoute);
-
-            if (targetRoute) {
-                console.log("   CLIENT-SIDE REDIRECT to:", targetRoute);
-                // Small delay to ensure components are ready
-                setTimeout(() => {
-                    router.push(targetRoute);
-                }, 100);
-            }
+            const targetRoute = roleRoutes[role as string] || "/admin";
+            router.replace(targetRoute);
         } else {
-            console.log("  NO ROLE - Not redirecting");
+            // Default fallback if role is not yet set or missing
+            router.replace("/admin");
         }
     }, [user, router, isLoaded, isSignedIn]);
 
-
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-fcDarkBg via-fcSurface to-fcDarkBg px-4 relative overflow-hidden">
-
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-5">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        backgroundImage:
-                            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-                        backgroundSize: "40px 40px",
-                    }}
-                />
-            </div>
-
-            {/* Glow Orbs */}
-            <div className="absolute top-10 left-10 w-32 h-32 bg-fcGarnet/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-10 right-10 w-40 h-40 bg-fcBlue/10 rounded-full blur-3xl" />
-
-            <SignIn.Root>
-                <SignIn.Step
-                    name="start"
-                    className="relative z-10 w-full max-w-md space-y-6 rounded-2xl glass-card border border-fcBorder px-6 py-10 shadow-xl sm:px-10"
-                >
-                    {/* Header */}
-                    <header className="text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-fcGarnet to-fcBlue mb-4 shadow-glow-garnet">
-                            <span className="text-3xl">⚽</span>
+        <div className="min-h-screen flex bg-[var(--bg-primary)]">
+            {/* Left Side - Branding */}
+            <div className="hidden lg:flex lg:w-1/2 bg-rmBlue relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-rmBlue to-rmBlueDark opacity-90"></div>
+                <div className="relative z-10 flex flex-col justify-center px-16 text-white">
+                    <div className="mb-8">
+                        <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-6">
+                            <span className="text-4xl">⚽</span>
                         </div>
-                        <h1 className="text-2xl font-heading font-bold text-white">
-                            Sign in to FC Manager
-                        </h1>
-                        <p className="mt-2 text-sm text-fcTextMuted">
-                            Enter your credentials to continue
-                        </p>
-                    </header>
-
-                    {/* Global Error */}
-                    <Clerk.GlobalError className="block text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2" />
-
-                    {/* Fields */}
-                    <div className="space-y-4">
-                        <Clerk.Field name="identifier" className="space-y-2">
-                            <Clerk.Label className="text-sm text-fcTextMuted">
-                                Email or Username
-                            </Clerk.Label>
-                            <Clerk.Input
-                                type="text"
-                                required
-                                className="w-full rounded-lg bg-fcSurface border border-fcBorder px-4 py-2.5 text-sm text-white outline-none transition-all hover:border-fcGarnet/50 focus:border-fcGarnet focus:ring-2 focus:ring-fcGarnet/20"
-                            />
-                            <Clerk.FieldError className="text-sm text-red-400" />
-                        </Clerk.Field>
-
-                        <Clerk.Field name="password" className="space-y-2">
-                            <Clerk.Label className="text-sm text-fcTextMuted">
-                                Password
-                            </Clerk.Label>
-                            <Clerk.Input
-                                type="password"
-                                required
-                                className="w-full rounded-lg bg-fcSurface border border-fcBorder px-4 py-2.5 text-sm text-white outline-none transition-all hover:border-fcGarnet/50 focus:border-fcGarnet focus:ring-2 focus:ring-fcGarnet/20"
-                            />
-                            <Clerk.FieldError className="text-sm text-red-400" />
-                        </Clerk.Field>
+                        <h1 className="text-5xl font-bold mb-4">Pato Hornets</h1>
+                        <p className="text-xl text-blue-100">Football Academy Management</p>
                     </div>
 
-                    {/* Submit */}
-                    <SignIn.Action
-                        submit
-                        className="w-full rounded-lg bg-gradient-to-r from-fcGarnet to-fcBlue py-2.5 text-sm font-semibold text-white shadow-glow-garnet hover:opacity-90 transition-all active:scale-[0.98]"
-                    >
-                        Sign In
-                    </SignIn.Action>
+                    <div className="space-y-6 mt-12">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                                <span className="text-2xl">🏆</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg mb-1">Elite Training</h3>
+                                <p className="text-blue-100 text-sm">Professional coaching for all skill levels</p>
+                            </div>
+                        </div>
 
-                    {/* Footer */}
-                    <p className="text-center text-xs text-fcTextDim mt-4">
-                        By signing in, you agree to our Terms & Privacy Policy
-                    </p>
-                </SignIn.Step>
-            </SignIn.Root>
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                                <span className="text-2xl">👥</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg mb-1">Expert Coaches</h3>
+                                <p className="text-blue-100 text-sm">15+ years of combined experience</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                                <span className="text-2xl">📊</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg mb-1">Track Progress</h3>
+                                <p className="text-blue-100 text-sm">Advanced analytics and reporting tools</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-16 pt-8 border-t border-white/20">
+                        <p className="text-blue-100 text-sm">
+                            Building Champions Since 2015
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Side - Sign In Form */}
+            <div className="flex-1 flex items-center justify-center p-8 bg-[var(--bg-primary)]">
+                <div className="w-full max-w-md">
+                    {/* Mobile Logo */}
+                    <div className="lg:hidden mb-8 text-center">
+                        <div className="inline-flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-rmBlue flex items-center justify-center">
+                                <span className="text-2xl">⚽</span>
+                            </div>
+                            <div className="text-left">
+                                <h1 className="text-2xl font-bold text-[var(--text-primary)]">Pato Hornets</h1>
+                                <p className="text-sm text-[var(--text-muted)]">Football Academy</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <SignIn.Root>
+                        <SignIn.Step
+                            name="start"
+                            className="w-full"
+                        >
+                            {/* Header */}
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
+                                    Welcome Back
+                                </h2>
+                                <p className="text-[var(--text-secondary)]">
+                                    Sign in to access your dashboard
+                                </p>
+                            </div>
+
+                            {/* Global Error */}
+                            <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg px-4 py-3 mb-4" />
+
+                            {/* Form Fields */}
+                            <div className="space-y-5">
+                                <Clerk.Field name="identifier" className="space-y-2">
+                                    <Clerk.Label className="block text-sm font-semibold text-[var(--text-secondary)]">
+                                        Email or Username
+                                    </Clerk.Label>
+                                    <Clerk.Input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-dim)] focus:border-rmBlue focus:ring-2 focus:ring-rmBlue/10 outline-none transition-all"
+                                        placeholder="Enter your email"
+                                    />
+                                    <Clerk.FieldError className="text-sm text-red-600" />
+                                </Clerk.Field>
+
+                                <Clerk.Field name="password" className="space-y-2">
+                                    <Clerk.Label className="block text-sm font-semibold text-[var(--text-secondary)]">
+                                        Password
+                                    </Clerk.Label>
+                                    <Clerk.Input
+                                        type="password"
+                                        required
+                                        className="w-full px-4 py-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-dim)] focus:border-rmBlue focus:ring-2 focus:ring-rmBlue/10 outline-none transition-all"
+                                        placeholder="Enter your password"
+                                    />
+                                    <Clerk.FieldError className="text-sm text-red-600" />
+                                </Clerk.Field>
+                            </div>
+
+                            {/* Submit Button */}
+                            <SignIn.Action
+                                submit
+                                className="w-full mt-6 py-3.5 rounded-lg bg-rmBlue text-white font-semibold hover:bg-rmBlueDark transition-all shadow-md hover:shadow-lg"
+                            >
+                                Sign In
+                            </SignIn.Action>
+
+                            {/* Footer */}
+                            <div className="mt-8 text-center">
+                                <p className="text-sm text-[var(--text-secondary)]">
+                                    Don't have an account?{" "}
+                                    <a href="#" className="text-rmBlue font-semibold hover:text-rmBlueDark">
+                                        Contact admin
+                                    </a>
+                                </p>
+                            </div>
+
+                            <div className="mt-6 text-center">
+                                <Link href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] inline-flex items-center gap-2">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    Back to home
+                                </Link>
+                            </div>
+
+                            <p className="mt-8 text-center text-xs text-[var(--text-muted)]">
+                                By signing in, you agree to our Terms & Privacy Policy
+                            </p>
+                        </SignIn.Step>
+                    </SignIn.Root>
+                </div>
+            </div>
         </div>
     );
 };
