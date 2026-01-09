@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getOrderById } from "@/lib/order-actions";
 import Link from "next/link";
+import StatusSelector from "@/components/StatusSelector";
 
 const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
     const user = await currentUser();
@@ -24,23 +25,33 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
     }
 
     return (
-        <div className="p-4">
-            <Link href="/admin/orders" className="text-fcGold hover:underline mb-4 inline-block">
+        <div className="p-4 space-y-4">
+            <Link href="/admin/orders" className="text-fcGold hover:underline inline-flex items-center gap-2">
                 ← Back to Orders
             </Link>
 
             <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)]">
-                        Order Details
-                    </h1>
-                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${order.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
-                        order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
-                            order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
-                                'bg-fcGarnet/20 text-fcGarnet'
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)]">
+                            Order Details
+                        </h1>
+                        <p className="text-sm text-[var(--text-muted)] mt-1">
+                            Order ID: {order.id}
+                        </p>
+                    </div>
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium self-start ${order.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
+                            order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
+                                order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
+                                    'bg-fcGarnet/20 text-fcGarnet'
                         }`}>
                         {order.status}
                     </span>
+                </div>
+
+                {/* Status Update Section */}
+                <div className="mb-8 pb-6 border-b border-[var(--border-color)]">
+                    <StatusSelector orderId={order.id} currentStatus={order.status} />
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">
@@ -64,9 +75,19 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
                                 <p className="text-[var(--text-primary)] font-medium">{order.email}</p>
                             </div>
                             <div>
+                                <label className="text-sm text-[var(--text-muted)]">User ID</label>
+                                <p className="text-[var(--text-primary)] font-mono text-xs">{order.userId}</p>
+                            </div>
+                            <div>
                                 <label className="text-sm text-[var(--text-muted)]">Order Date</label>
                                 <p className="text-[var(--text-primary)] font-medium">
                                     {new Date(order.createdAt).toLocaleString()}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="text-sm text-[var(--text-muted)]">Last Updated</label>
+                                <p className="text-[var(--text-primary)] font-medium">
+                                    {new Date(order.updatedAt).toLocaleString()}
                                 </p>
                             </div>
                         </div>
