@@ -299,13 +299,7 @@ export async function sendClerkInvitation(params: {
         // User will reset this via invitation email
         const tempPassword = crypto.randomBytes(32).toString('hex');
 
-        console.log("🟦 [SEND_CLERK_INVITATION] Creating user with payload:", {
-            username,
-            emailAddress: [params.email],
-            firstName: params.firstName,
-            lastName: params.lastName,
-            role: params.role
-        });
+
 
         // Create Clerk user WITH username and temporary password
         const clerkUser = await client.users.createUser({
@@ -317,7 +311,7 @@ export async function sendClerkInvitation(params: {
             publicMetadata: { role: params.role },
         });
 
-        console.log("🟦 [SEND_CLERK_INVITATION] User created successfully:", clerkUser.id);
+
 
         // Try to send invitation (non-fatal if this fails)
         try {
@@ -334,14 +328,10 @@ export async function sendClerkInvitation(params: {
                 redirectUrl: redirectUrl,
             });
 
-            console.log("🟦 [SEND_CLERK_INVITATION] Invitation sent successfully");
+
         } catch (inviteError: any) {
             // Invitation failed but user was created - this is OK
-            console.warn("⚠️  [SEND_CLERK_INVITATION] Invitation email failed (user still created):", {
-                error: inviteError.message,
-                code: inviteError.code,
-                userId: clerkUser.id
-            });
+            // Invitation failed but user was created successfully
         }
 
         // Return success as long as user was created
@@ -363,13 +353,30 @@ export async function sendClerkInvitation(params: {
             longMessage: error.longMessage
         });
 
-        // Handle duplicate email gracefully
+        // Handle duplicate email/username - fetch existing user instead of failing
         if (error.errors?.[0]?.code === "form_identifier_exists") {
-            return {
-                success: false,
-                error: true,
-                message: "This email is already registered",
-            };
+            try {
+                const client = await clerkClient();
+
+                // Fetch existing user by email
+                const users = await client.users.getUserList({
+                    emailAddress: [params.email],
+                });
+
+                if (users.data.length > 0) {
+                    const existingUser = users.data[0];
+
+                    // Return success with existing user's ID
+                    return {
+                        success: true,
+                        error: false,
+                        message: "Using existing user account",
+                        data: { clerkUserId: existingUser.id },
+                    };
+                }
+            } catch (fetchError) {
+                console.error("[SEND_INVITATION_ERROR] Failed to fetch existing user:", fetchError);
+            }
         }
 
         // Handle username issues

@@ -26,17 +26,16 @@ export type OrderSchema = z.infer<typeof orderSchema>;
 
 export const createOrder = async (data: OrderSchema) => {
     try {
-        console.log("[CREATE_ORDER] Starting:", data);
+        const { getCurrentUser } = await import("./action-helpers");
+        const user = await getCurrentUser();
 
-        const { userId } = await auth();
-        if (!userId) {
-            console.error("[CREATE_ORDER] No userId");
+        if (!user) {
             return { success: false, error: true, message: "Not authenticated" };
         }
 
-        const order = await prisma.order.create({
+        const order = await prisma.jerseyOrder.create({
             data: {
-                userId,
+                userId: user.id,
                 customerName: data.customerName,
                 contactNumber: data.contactNumber,
                 email: data.email,
@@ -51,7 +50,6 @@ export const createOrder = async (data: OrderSchema) => {
             },
         });
 
-        console.log("[CREATE_ORDER] Success:", order.id);
         revalidatePath("/admin/orders");
 
         return {
@@ -71,7 +69,7 @@ export const createOrder = async (data: OrderSchema) => {
 
 export const getAllOrders = async () => {
     try {
-        const orders = await prisma.order.findMany({
+        const orders = await prisma.jerseyOrder.findMany({
             orderBy: { createdAt: 'desc' },
         });
         return orders;
@@ -83,7 +81,7 @@ export const getAllOrders = async () => {
 
 export const getOrderById = async (id: string) => {
     try {
-        const order = await prisma.order.findUnique({
+        const order = await prisma.jerseyOrder.findUnique({
             where: { id },
         });
         return order;
@@ -95,7 +93,7 @@ export const getOrderById = async (id: string) => {
 
 export const updateOrderStatus = async (id: string, status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED") => {
     try {
-        await prisma.order.update({
+        await prisma.jerseyOrder.update({
             where: { id },
             data: { status },
         });
@@ -109,7 +107,7 @@ export const updateOrderStatus = async (id: string, status: "PENDING" | "PROCESS
 
 export const deleteOrder = async (id: string) => {
     try {
-        await prisma.order.delete({
+        await prisma.jerseyOrder.delete({
             where: { id },
         });
         revalidatePath("/admin/orders");

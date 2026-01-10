@@ -15,14 +15,14 @@ datasource db {
 // ============================================
 // Clerk handles authentication, this handles authorization
 model AppUser {
-  id        String   @id // Clerk userId - DO NOT auto-generate
-  email     String   @unique
+  id        String     @id // Clerk userId - DO NOT auto-generate
+  email     String     @unique
   role      Role
   status    UserStatus @default(ACTIVE)
-  isDeleted Boolean  @default(false)
+  isDeleted Boolean    @default(false)
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   // One user can have ONE role-specific profile
   admin   Admin?
@@ -32,6 +32,9 @@ model AppUser {
 
   // Audit trail
   activityLogs ActivityLog[]
+  
+  // Shop orders
+  jerseyOrders JerseyOrder[]
   
   @@index([role])
   @@index([status])
@@ -74,17 +77,17 @@ enum DayOfWeek {
 // ROLE-SPECIFIC PROFILES
 // ============================================
 model Admin {
-  id        String   @id @default(uuid())
-  userId    String   @unique
+  id        String    @id @default(uuid())
+  userId    String    @unique
   firstName String
   lastName  String
   email     String?
   phone     String?
-  photo     String?  // URL to Clerk-managed photo
-  isDeleted Boolean  @default(false)
+  photo     String? // URL to Clerk-managed photo
+  isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -92,24 +95,24 @@ model Admin {
 }
 
 model Coach {
-  id              String    @id @default(uuid())
-  userId          String    @unique
-  displayId       String?   @unique
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  photo           String?   // URL to photo storage
-  address         String?
-  specialization  String[]
-  sex             Sex
-  bloodType       String?
-  isDeleted       Boolean   @default(false)
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  displayId      String?   @unique
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  photo          String? // URL to photo storage
+  address        String?
+  specialization String[]
+  sex            Sex
+  bloodType      String?
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  user      AppUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
   ageGroups CoachAgeGroup[]
   sessions  TrainingSession[]
 
@@ -130,9 +133,9 @@ model Parent {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user      AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  students  Student[]
-  payments  Payment[]
+  user     AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students Student[]
+  payments Payment[]
 
   @@index([userId])
   @@index([isDeleted])
@@ -243,15 +246,15 @@ model TrainingSession {
   dayOfWeek   DayOfWeek
   venue       String
   type        TrainingSessionType
-  coachId     String  // OWNERSHIP: Coach can only edit their own
+  coachId     String // OWNERSHIP: Coach can only edit their own
   ageGroupId  String
   isDeleted   Boolean             @default(false)
   deletedAt   DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  coach       Coach       @relation(fields: [coachId], references: [id], onDelete: Restrict)
-  ageGroup    AgeGroup    @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
+  coach       Coach        @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  ageGroup    AgeGroup     @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
   attendances Attendance[]
 
   @@index([coachId])
@@ -279,7 +282,7 @@ model Attendance {
   status            AttendanceStatus
   notes             String?
   markedAt          DateTime         @default(now())
-  markedBy          String           // Clerk userId of coach
+  markedBy          String // Clerk userId of coach
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -410,20 +413,20 @@ model Announcement {
 // SHOP: Products & Orders
 // ============================================
 model Product {
-  id          String        @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   description String?
   price       Float
   category    ProductCategory
-  sizes       String[]      // ["S", "M", "L", "XL"]
-  stock       Int           @default(0)
-  images      String[]      // URLs to image storage
-  isActive    Boolean       @default(true)
-  isDeleted   Boolean       @default(false)
+  sizes       String[] // ["S", "M", "L", "XL"]
+  stock       Int             @default(0)
+  images      String[] // URLs to image storage
+  isActive    Boolean         @default(true)
+  isDeleted   Boolean         @default(false)
   deletedAt   DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  createdBy   String        // Admin userId
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  createdBy   String // Admin userId
 
   orderItems OrderItem[]
 
@@ -442,35 +445,35 @@ enum ProductCategory {
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  userId        String      // Student or Parent userId
-  customerName  String
-  contactNumber String
-  email         String
+  id              String  @id @default(cuid())
+  userId          String // Student or Parent userId
+  customerName    String
+  contactNumber   String
+  email           String
   shippingAddress String?
-  totalAmount   Float?
-  
-  // Jersey-specific fields
-  shirtSize     String?
-  shortsSize    String?
-  socksSize     String?
-  jerseyName    String?
-  jerseyNumber  Int?
-  customLength  String?
-  customWidth   String?
-  customNotes   String?
-  
-  status        OrderStatus @default(PENDING)
-  notes         String?
-  isDeleted     Boolean     @default(false) // SOFT DELETE - financial data
-  deletedAt     DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  totalAmount     Float?
 
-  student Student?    @relation(fields: [userId], references: [userId], onDelete: Restrict)
-  items   OrderItem[]
+  // Jersey-specific fields
+  shirtSize    String?
+  shortsSize   String?
+  socksSize    String?
+  jerseyName   String?
+  jerseyNumber Int?
+  customLength String?
+  customWidth  String?
+  customNotes  String?
+
+  status    OrderStatus @default(PENDING)
+  notes     String?
+  isDeleted Boolean     @default(false) // SOFT DELETE - financial data
+  deletedAt DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  student  Student?    @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  items    OrderItem[]
   payments Payment[]
-  
+
   @@index([userId])
   @@index([status])
   @@index([createdAt])
@@ -493,7 +496,7 @@ model OrderItem {
   productId String
   quantity  Int
   size      String
-  price     Float    // Snapshot price at time of order
+  price     Float // Snapshot price at time of order
   createdAt DateTime @default(now())
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -509,17 +512,17 @@ model OrderItem {
 model Payment {
   id              String        @id @default(uuid())
   orderId         String
-  parentId        String?       // Who made the payment
+  parentId        String? // Who made the payment
   amount          Float
   currency        String        @default("USD")
   method          PaymentMethod
   status          PaymentStatus @default(PENDING)
-  provider        String?       // "stripe", "mock", "cash"
-  providerRef     String?       // Stripe payment intent ID
-  providerRawData Json?         // Full Stripe response
+  provider        String? // "stripe", "mock", "cash"
+  providerRef     String? // Stripe payment intent ID
+  providerRawData Json? // Full Stripe response
   notes           String?
   processedAt     DateTime?
-  createdBy       String        // Admin or parent userId
+  createdBy       String // Admin or parent userId
   isDeleted       Boolean       @default(false) // SOFT DELETE - financial data
   deletedAt       DateTime?
   createdAt       DateTime      @default(now())
@@ -558,28 +561,28 @@ enum PaymentStatus {
 // ADMISSIONS
 // ============================================
 model Admission {
-  id             String          @id @default(cuid())
-  firstName      String
-  lastName       String
-  email          String
-  phone          String
-  dateOfBirth    DateTime
-  sex            Sex
-  address        String
-  parentName     String
-  parentPhone    String
-  parentEmail    String?
-  position       String?
-  notes          String?
-  status         AdmissionStatus @default(PENDING)
-  reviewedBy     String?         // Admin userId
-  reviewedAt     DateTime?
-  reviewNotes    String?
-  convertedToStudentId String?   // Track if converted
-  isDeleted      Boolean         @default(false)
-  deletedAt      DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                   String          @id @default(cuid())
+  firstName            String
+  lastName             String
+  email                String
+  phone                String
+  dateOfBirth          DateTime
+  sex                  Sex
+  address              String
+  parentName           String
+  parentPhone          String
+  parentEmail          String?
+  position             String?
+  notes                String?
+  status               AdmissionStatus @default(PENDING)
+  reviewedBy           String? // Admin userId
+  reviewedAt           DateTime?
+  reviewNotes          String?
+  convertedToStudentId String? // Track if converted
+  isDeleted            Boolean         @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
   @@index([status])
   @@index([createdAt])
@@ -598,19 +601,19 @@ enum AdmissionStatus {
 // FILE STORAGE TRACKING
 // ============================================
 model FileUpload {
-  id           String   @id @default(uuid())
-  url          String
-  filename     String
-  mimeType     String
-  sizeBytes    Int
-  uploadedBy   String   // userId
-  entityType   String?  // "product", "student", "coach"
-  entityId     String?  // Reference to entity
-  provider     String   @default("cloudinary") // or "s3", "clerk"
-  providerRef  String?  // Cloudinary public_id
-  isDeleted    Boolean  @default(false)
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
+  id          String    @id @default(uuid())
+  url         String
+  filename    String
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String // userId
+  entityType  String? // "product", "student", "coach"
+  entityId    String? // Reference to entity
+  provider    String    @default("cloudinary") // or "s3", "clerk"
+  providerRef String? // Cloudinary public_id
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([entityType, entityId])
   @@index([uploadedBy])
@@ -618,15 +621,54 @@ model FileUpload {
 }
 
 // ============================================
+// SHOP: Jersey Orders
+// ============================================
+enum JerseyOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+model JerseyOrder {
+  id            String            @id @default(uuid())
+  userId        String
+  customerName  String
+  contactNumber String
+  email         String
+  shirtSize     String
+  shortsSize    String
+  socksSize     String
+  jerseyName    String
+  jerseyNumber  Int
+  customLength  String?
+  customWidth   String?
+  customNotes   String?
+  status        JerseyOrderStatus @default(PENDING)
+  isDeleted     Boolean           @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([isDeleted])
+  @@index([createdAt])
+}
+
+
+// ============================================
 // AUDIT & ACTIVITY LOGS
 // ============================================
 model ActivityLog {
   id          String   @id @default(uuid())
-  action      String   // "CREATE_STUDENT", "UPDATE_ORDER", "DELETE_COACH"
-  performedBy String   // userId
-  targetType  String?  // "Student", "Order", "Coach"
+  action      String // "CREATE_STUDENT", "UPDATE_ORDER", "DELETE_COACH"
+  performedBy String // userId
+  targetType  String? // "Student", "Order", "Coach"
   targetId    String?
-  details     Json?    // Flexible metadata
+  details     Json? // Flexible metadata
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
@@ -645,9 +687,9 @@ model ActivityLog {
 model ClerkSyncLog {
   id          String   @id @default(uuid())
   clerkUserId String
-  eventType   String   // "user.created", "user.updated", "user.deleted"
+  eventType   String // "user.created", "user.updated", "user.deleted"
   payload     Json
-  status      String   // "success", "failed", "pending"
+  status      String // "success", "failed", "pending"
   error       String?
   processedAt DateTime @default(now())
 
