@@ -69,14 +69,7 @@ const TeacherForm = ({
             Account Information
           </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InputField
-            label="Username"
-            name="username"
-            defaultValue={data?.username}
-            register={register}
-            error={errors?.username}
-          />
+        <div className="grid grid-cols-1 gap-4">
           <InputField
             label="Email"
             name="email"
@@ -84,14 +77,12 @@ const TeacherForm = ({
             register={register}
             error={errors?.email}
           />
-          <InputField
-            label="Password"
-            name="password"
-            type="password"
-            defaultValue={data?.password}
-            register={register}
-            error={errors?.password}
-          />
+          <div className="p-3 rounded-lg bg-fcBlue/10 border border-fcBlue/30">
+            <p className="text-xs text-[var(--text-muted)] flex items-center gap-2">
+              <span className="text-fcBlue">ℹ️</span>
+              An invitation email will be sent to this address. The coach will set their own password via the secure link.
+            </p>
+          </div>
         </div>
       </div>
 

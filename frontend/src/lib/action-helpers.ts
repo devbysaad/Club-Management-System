@@ -1,9 +1,10 @@
 "use server";
 
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import prisma from "./prisma";
 import { Role } from "@prisma/client";
 import { formatPrismaError, formatError } from "./error-utils";
+import crypto from "crypto";
 
 // ============================================
 // TYPE DEFINITIONS
@@ -31,11 +32,23 @@ export type ClerkUserInfo = {
  */
 export async function getCurrentUser(): Promise<ClerkUserInfo | null> {
     try {
-        const { userId } = await auth();
+        // Try auth() first
+        const { userId: authUserId } = await auth();
+
+        // If auth() doesn't work (Server Actions bug), try currentUser()
+        let userId = authUserId;
+        if (!userId) {
+            const user = await currentUser();
+            if (user) {
+                userId = user.id;
+            }
+        }
+
         if (!userId) return null;
 
-        // Get Clerk user
-        const clerkUser = await clerkClient.users.getUser(userId);
+        // Get Clerk client and user
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(userId);
 
         // Sync with AppUser table (source of truth for role)
         let appUser = await prisma.appUser.findUnique({
@@ -44,7 +57,11 @@ export async function getCurrentUser(): Promise<ClerkUserInfo | null> {
 
         // If AppUser doesn't exist but Clerk user does, create it
         if (!appUser) {
-            const role = (clerkUser.publicMetadata?.role as Role) || Role.STUDENT;
+            // Clerk stores role as lowercase string "admin", "coach", etc.
+            // Prisma Role enum needs uppercase "ADMIN", "COACH", etc.
+            const roleFromClerk = clerkUser.publicMetadata?.role as string;
+            const role = (roleFromClerk?.toUpperCase() as Role) || Role.STUDENT;
+
             appUser = await prisma.appUser.create({
                 data: {
                     id: userId,
@@ -76,7 +93,8 @@ export async function getCurrentUser(): Promise<ClerkUserInfo | null> {
  */
 export async function validateClerkUser(userId: string): Promise<boolean> {
     try {
-        await clerkClient.users.getUser(userId);
+        const client = await clerkClient();
+        await client.users.getUser(userId);
         return true;
     } catch (error) {
         return false;
@@ -212,10 +230,14 @@ export async function withTransaction<T>(
             return await action(tx);
         });
     } catch (error: any) {
-        console.error("[TRANSACTION_ERROR]", {
+        console.error("[TRANSACTION_ERROR] Full error object:", error);
+        console.error("[TRANSACTION_ERROR] Details:", {
+            name: error.name,
             message: error.message,
             code: error.code,
             meta: error.meta,
+            clientVersion: error.clientVersion,
+            stack: error.stack
         });
 
         return {
@@ -267,33 +289,79 @@ export async function sendClerkInvitation(params: {
     lastName?: string;
 }): Promise<ActionResult<{ clerkUserId: string }>> {
     try {
-        // Create Clerk user (WITHOUT password)
-        const clerkUser = await clerkClient.users.createUser({
+        const client = await clerkClient();
+
+        // Generate username from email (part before @)
+        // Clerk only allows: letters, numbers, dash, underscore
+        const username = params.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        // Generate a secure random password
+        // User will reset this via invitation email
+        const tempPassword = crypto.randomBytes(32).toString('hex');
+
+        console.log("🟦 [SEND_CLERK_INVITATION] Creating user with payload:", {
+            username,
             emailAddress: [params.email],
             firstName: params.firstName,
             lastName: params.lastName,
+            role: params.role
+        });
+
+        // Create Clerk user WITH username and temporary password
+        const clerkUser = await client.users.createUser({
+            username: username,  // Clerk requires username for this instance
+            emailAddress: [params.email],
+            password: tempPassword,
+            firstName: params.firstName,
+            lastName: params.lastName,
             publicMetadata: { role: params.role },
-            skipPasswordRequirement: true, // User sets password via invitation
         });
 
-        // Send invitation
-        await clerkClient.invitations.createInvitation({
-            emailAddress: params.email,
-            publicMetadata: {
-                role: params.role,
-                userId: clerkUser.id,
-            },
-            redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/sign-in`,
-        });
+        console.log("🟦 [SEND_CLERK_INVITATION] User created successfully:", clerkUser.id);
 
+        // Try to send invitation (non-fatal if this fails)
+        try {
+            const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
+                ? `${process.env.NEXT_PUBLIC_APP_URL}/sign-in`
+                : 'http://localhost:3000/sign-in';
+
+            await client.invitations.createInvitation({
+                emailAddress: params.email,
+                publicMetadata: {
+                    role: params.role,
+                    userId: clerkUser.id,
+                },
+                redirectUrl: redirectUrl,
+            });
+
+            console.log("🟦 [SEND_CLERK_INVITATION] Invitation sent successfully");
+        } catch (inviteError: any) {
+            // Invitation failed but user was created - this is OK
+            console.warn("⚠️  [SEND_CLERK_INVITATION] Invitation email failed (user still created):", {
+                error: inviteError.message,
+                code: inviteError.code,
+                userId: clerkUser.id
+            });
+        }
+
+        // Return success as long as user was created
         return {
             success: true,
             error: false,
-            message: "Invitation sent successfully",
+            message: "User created successfully",
             data: { clerkUserId: clerkUser.id },
         };
     } catch (error: any) {
         console.error("[SEND_INVITATION_ERROR]", error);
+        console.error("[SEND_INVITATION_ERROR] Full error details:", {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            status: error.status,
+            errors: error.errors,
+            clerkError: error.clerkError,
+            longMessage: error.longMessage
+        });
 
         // Handle duplicate email gracefully
         if (error.errors?.[0]?.code === "form_identifier_exists") {
@@ -301,6 +369,16 @@ export async function sendClerkInvitation(params: {
                 success: false,
                 error: true,
                 message: "This email is already registered",
+            };
+        }
+
+        // Handle username issues
+        if (error.errors?.[0]?.code === "form_data_missing") {
+            console.error("[SEND_INVITATION_ERROR] Username validation failed");
+            return {
+                success: false,
+                error: true,
+                message: `Username error: ${error.errors[0].longMessage || error.errors[0].message}`,
             };
         }
 

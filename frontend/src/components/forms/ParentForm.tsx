@@ -38,18 +38,29 @@ const ParentForm = ({
     const router = useRouter();
 
     const onSubmit = handleSubmit((data) => {
+        console.log("🟩 [PARENT FORM] Form submitted with data:", data);
+        console.log("🟩 [PARENT FORM] Calling formAction...");
         formAction(data);
     });
 
     useEffect(() => {
+        console.log("🟩 [PARENT FORM] State changed:", {
+            success: state.success,
+            error: state.error,
+            message: state.message
+        });
+
         if (state.success) {
+            console.log("🟩 [PARENT FORM] SUCCESS - Showing toast");
             toast.success(`Parent has been ${type === "create" ? "created" : "updated"}!`);
             setTimeout(() => {
+                console.log("🟩 [PARENT FORM] Closing modal and refreshing");
                 setOpen?.(false);
                 router.refresh();
             }, 500);
         } else if (state.error) {
-            toast.error("Something went wrong! Please check your inputs.");
+            console.error("🟩 [PARENT FORM] ERROR - Showing error toast", state.message);
+            toast.error(state.message || "Something went wrong! Please check your inputs.");
         }
     }, [state, router, type, setOpen]);
 
@@ -67,14 +78,7 @@ const ParentForm = ({
                         Account Information
                     </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InputField
-                        label="Username"
-                        name="username"
-                        defaultValue={data?.username}
-                        register={register}
-                        error={errors?.username}
-                    />
+                <div className="grid grid-cols-1 gap-4">
                     <InputField
                         label="Email"
                         name="email"
@@ -82,14 +86,12 @@ const ParentForm = ({
                         register={register}
                         error={errors?.email}
                     />
-                    <InputField
-                        label="Password"
-                        name="password"
-                        type="password"
-                        defaultValue={data?.password}
-                        register={register}
-                        error={errors?.password}
-                    />
+                    <div className="p-3 rounded-lg bg-fcBlue/10 border border-fcBlue/30">
+                        <p className="text-xs text-[var(--text-muted)] flex items-center gap-2">
+                            <span className="text-fcBlue">ℹ️</span>
+                            An invitation email will be sent to this address. The parent will set their own password via the secure link.
+                        </p>
+                    </div>
                 </div>
             </div>
 

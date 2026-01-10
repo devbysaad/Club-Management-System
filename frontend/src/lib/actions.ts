@@ -368,56 +368,99 @@ export const createParent = async (
     currentState: CurrentState,
     data: ParentSchema
 ): Promise<ActionResult> => {
+    console.log("🔴 [CREATE PARENT] START - Received data:", JSON.stringify(data, null, 2));
+
     return withRole([Role.ADMIN], async (user) => {
+        console.log("🔴 [CREATE PARENT] Auth check passed - User:", user);
+
+        // STEP 1: Create Clerk user OUTSIDE transaction
+        console.log("🔴 [CREATE PARENT] STEP 1: Creating Clerk user (outside transaction)");
+        const clerkResult = await sendClerkInvitation({
+            email: data.email!,
+            role: Role.PARENT,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        console.log("🔴 [CREATE PARENT] Clerk result:", {
+            success: clerkResult.success,
+            error: clerkResult.error,
+            message: clerkResult.message,
+            clerkUserId: clerkResult.data?.clerkUserId
+        });
+
+        // FAIL if Clerk user creation failed
+        if (!clerkResult.success) {
+            console.error("🔴 [CREATE PARENT] FAILED - Clerk user creation failed:", clerkResult);
+            return clerkResult;
+        }
+
+        const clerkUserId = clerkResult.data!.clerkUserId;
+        console.log("🔴 [CREATE PARENT] Clerk user created:", clerkUserId);
+
+        // STEP 2: Save to database in transaction
+        // This happens REGARDLESS of invitation success/failure
         return withTransaction(async (tx) => {
-            const inviteResult = await sendClerkInvitation({
-                email: data.email!,
-                role: Role.PARENT,
-                firstName: data.firstName,
-                lastName: data.lastName,
-            });
+            console.log("🔴 [CREATE PARENT] Transaction started");
 
-            if (!inviteResult.success) {
-                return inviteResult;
+            try {
+                // Create AppUser
+                console.log("🔴 [CREATE PARENT] STEP 2: Creating AppUser record");
+                await tx.appUser.create({
+                    data: {
+                        id: clerkUserId,
+                        email: data.email!,
+                        role: Role.PARENT,
+                        status: "ACTIVE",
+                    },
+                });
+                console.log("🔴 [CREATE PARENT] AppUser created successfully");
+
+                // Create Parent Profile
+                console.log("🔴 [CREATE PARENT] STEP 3: Creating Parent profile");
+                const parent = await tx.parent.create({
+                    data: {
+                        userId: clerkUserId,
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        email: data.email,
+                        phone: data.phone,
+                        address: data.address,
+                    },
+                });
+                console.log("🔴 [CREATE PARENT] Parent profile created:", parent.id);
+
+                // Log Activity
+                console.log("🔴 [CREATE PARENT] STEP 4: Logging activity");
+                await logActivity({
+                    action: "CREATE_PARENT",
+                    performedBy: user.id,
+                    targetType: "Parent",
+                    targetId: parent.id,
+                    details: { firstName: data.firstName, lastName: data.lastName },
+                });
+                console.log("🔴 [CREATE PARENT] Activity logged");
+
+                // Revalidate
+                console.log("🔴 [CREATE PARENT] STEP 5: Revalidating path");
+                revalidatePath("/list/parents");
+                console.log("🔴 [CREATE PARENT] SUCCESS - Parent created:", parent.id);
+
+                return {
+                    success: true,
+                    error: false,
+                    message: `Parent ${data.firstName} ${data.lastName} created successfully`,
+                };
+            } catch (error: any) {
+                console.error("🔴 [CREATE PARENT] DATABASE ERROR:", {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    code: error.code,
+                    meta: error.meta
+                });
+                throw error; // Re-throw to let withTransaction handle it
             }
-
-            const clerkUserId = inviteResult.data!.clerkUserId;
-
-            await tx.appUser.create({
-                data: {
-                    id: clerkUserId,
-                    email: data.email!,
-                    role: Role.PARENT,
-                    status: "ACTIVE",
-                },
-            });
-
-            const parent = await tx.parent.create({
-                data: {
-                    userId: clerkUserId,
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    email: data.email,
-                    phone: data.phone,
-                    address: data.address,
-                },
-            });
-
-            await logActivity({
-                action: "CREATE_PARENT",
-                performedBy: user.id,
-                targetType: "Parent",
-                targetId: parent.id,
-                details: { firstName: data.firstName, lastName: data.lastName },
-            });
-
-            revalidatePath("/list/parents");
-
-            return {
-                success: true,
-                error: false,
-                message: `Parent ${data.firstName} ${data.lastName} created and invitation sent`,
-            };
         });
     });
 };
