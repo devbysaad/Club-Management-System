@@ -78,9 +78,10 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
 
                         {/* Desktop Nav */}
                         <div className="hidden md:flex items-center gap-8">
-                            <a href="/about" className="text-sm font-medium text-[var(--text-secondary)] hover:text-rmBlue transition-colors">About</a>
+
                             <a href="#programs" className="text-sm font-medium text-[var(--text-secondary)] hover:text-rmBlue transition-colors">Programs</a>
                             <a href="#coaches" className="text-sm font-medium text-[var(--text-secondary)] hover:text-rmBlue transition-colors">Coaches</a>
+
                             <a href="#contact" className="text-sm font-medium text-[var(--text-secondary)] hover:text-rmBlue transition-colors">Contact</a>
 
                             {/* Theme Toggle */}
@@ -133,6 +134,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                             <a href="#about" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[var(--text-secondary)] hover:text-rmBlue">About</a>
                             <a href="#programs" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[var(--text-secondary)] hover:text-rmBlue">Programs</a>
                             <a href="#coaches" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[var(--text-secondary)] hover:text-rmBlue">Coaches</a>
+                            <a href="/shop" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[var(--text-secondary)] hover:text-rmBlue">Shop</a>
                             <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[var(--text-secondary)] hover:text-rmBlue">Contact</a>
                             {userId ? (
                                 <Link href="/admin" className="block px-6 py-3 mt-2 rounded-lg bg-rmBlue text-white text-center font-semibold">
@@ -207,53 +209,6 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                 </div>
             </section>
 
-            {/* About Section */}
-            <section id="about" className="py-24 px-6 bg-[var(--bg-primary)]">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid md:grid-cols-2 gap-16 items-center">
-                        <div className="order-2 md:order-1">
-                            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-white flex items-center justify-center shadow-xl border border-[var(--border-color)]">
-                                <video
-                                    className="w-full h-full object-cover"
-                                    src="/patoAssets/patoVideo.mp4"
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                />
-                            </div>
-                        </div>
-
-
-                        <div className="order-1 md:order-2">
-                            <span className="text-rmBlue uppercase tracking-wider text-sm font-bold">About Us</span>
-                            <h2 className="text-4xl md:text-5xl font-bold text-[var(--text-primary)] mt-4 mb-6">
-                                Welcome to Pato Hornets
-                            </h2>
-                            <p className="text-lg text-[var(--text-secondary)] mb-8 leading-relaxed">
-                                Founded on October 10, 2025, Pato Hornets Football Academy is dedicated to developing the next generation of football stars through excellence in coaching, technical training, and character development.
-                            </p>
-
-                            <div className="space-y-4">
-                                {[
-                                    { icon: "⚽", title: "Technical Excellence", desc: "Advanced ball control and skill development" },
-                                    { icon: "🎯", title: "Tactical Training", desc: "Game intelligence and strategic positioning" },
-                                    { icon: "💪", title: "Physical Conditioning", desc: "Strength, agility, and endurance programs" },
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-start gap-4 p-4 rounded-xl hover:bg-[var(--bg-surface-light)] transition-colors border border-transparent hover:border-[var(--border-color)]">
-                                        <span className="text-3xl">{item.icon}</span>
-                                        <div>
-                                            <h3 className="font-bold text-[var(--text-primary)] mb-1">{item.title}</h3>
-                                            <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Programs Section */}
             <section id="programs" className="py-24 px-6 bg-[var(--bg-surface-light)]">
                 <div className="max-w-7xl mx-auto">
@@ -306,6 +261,53 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                                 <p className="text-[var(--text-muted)] text-sm">{coach.exp} Experience</p>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* About Section - Moved to end before Contact */}
+            <section id="about" className="py-24 px-6 bg-[var(--bg-surface-light)]">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid md:grid-cols-2 gap-16 items-center">
+                        <div className="order-2 md:order-1">
+                            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-white flex items-center justify-center shadow-xl border border-[var(--border-color)]">
+                                <video
+                                    className="w-full h-full object-cover"
+                                    src="/patoAssets/patoVideo.mp4"
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                />
+                            </div>
+                        </div>
+
+
+                        <div className="order-1 md:order-2">
+                            <span className="text-rmBlue uppercase tracking-wider text-sm font-bold">About Us</span>
+                            <h2 className="text-4xl md:text-5xl font-bold text-[var(--text-primary)] mt-4 mb-6">
+                                Welcome to Pato Hornets
+                            </h2>
+                            <p className="text-lg text-[var(--text-secondary)] mb-8 leading-relaxed">
+                                Founded on October 10, 2025, Pato Hornets Football Academy is dedicated to developing the next generation of football stars through excellence in coaching, technical training, and character development.
+                            </p>
+
+                            <div className="space-y-4">
+                                {[
+                                    { icon: "⚽", title: "Technical Excellence", desc: "Advanced ball control and skill development" },
+                                    { icon: "🎯", title: "Tactical Training", desc: "Game intelligence and strategic positioning" },
+                                    { icon: "💪", title: "Physical Conditioning", desc: "Strength, agility, and endurance programs" },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-start gap-4 p-4 rounded-xl hover:bg-[var(--bg-surface)] transition-colors border border-transparent hover:border-[var(--border-color)]">
+                                        <span className="text-3xl">{item.icon}</span>
+                                        <div>
+                                            <h3 className="font-bold text-[var(--text-primary)] mb-1">{item.title}</h3>
+                                            <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -387,6 +389,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                         <div className="flex gap-6">
                             <a href="#" className="text-sm text-[var(--text-muted)] hover:text-rmBlue">Privacy</a>
                             <a href="#" className="text-sm text-[var(--text-muted)] hover:text-rmBlue">Terms</a>
+                            <a href="/about" className="text-sm text-[var(--text-muted)] hover:text-rmBlue">About</a>
                             <Link href="/admin" className="text-sm text-rmBlue font-semibold hover:text-rmBlueDark">Dashboard</Link>
                         </div>
                     </div>

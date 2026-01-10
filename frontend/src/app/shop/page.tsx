@@ -18,6 +18,8 @@ const ShopPage = () => {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
@@ -46,6 +48,7 @@ const ShopPage = () => {
 
         setLoading(false);
     };
+
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] p-4 md:p-8">
@@ -240,7 +243,7 @@ const ShopPage = () => {
                         <div className="glass-card rounded-xl p-6 bg-gradient-to-br from-fcGarnet/10 to-fcBlue/10">
                             <h3 className="text-sm font-semibold text-[var(--text-muted)] mb-3">Jersey Preview</h3>
                             <div className="aspect-square max-w-xs mx-auto rounded-xl bg-gradient-to-br from-fcGarnet to-fcGarnetLight flex items-center justify-center">
-                                <img src="patoshirt.jpeg" alt="" />
+                                <img className="w-full h-full object-contain" src="patoshirt.jpeg" alt="" />
                             </div>
                             <p className="text-center text-xs text-[var(--text-muted)] mt-3">
                                 Custom image preview coming soon

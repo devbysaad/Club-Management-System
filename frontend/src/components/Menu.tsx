@@ -93,6 +93,12 @@ const menuItems = [
       },
       {
         icon: "/assignment.png",
+        label: "Shop",
+        href: "/shop",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/assignment.png",
         label: "Orders",
         href: "/admin/orders",
         visible: ["admin"],

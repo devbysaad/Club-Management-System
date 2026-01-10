@@ -7,14 +7,20 @@ const publicRoutes = createRouteMatcher([
   "/",
   "/about",
   "/admission",
+  "/shop",           // ✅ SHOP IS PUBLIC
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);
 
-const matchers = Object.keys(routeAccessMap).map((route) => ({
-  matcher: createRouteMatcher([route]),
-  allowedRoles: routeAccessMap[route],
-}));
+// Protected routes that require authentication
+const protectedRoutes = createRouteMatcher([
+  "/admin(.*)",
+  "/teacher(.*)",
+  "/student(.*)",
+  "/parent(.*)",
+  "/list/(.*)",
+  "/profile(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
@@ -27,18 +33,23 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  const { userId } = await auth();
-  console.log("👤 UserId:", userId);
+  // Check if route requires authentication
+  if (protectedRoutes(req)) {
+    const { userId } = await auth();
+    console.log("👤 UserId:", userId);
 
-  // Not logged in → send to sign-in
-  if (!userId) {
-    console.log("❌ No userId - redirecting to /");
-    return NextResponse.redirect(new URL("/", req.url));
+    // Not logged in → send to home
+    if (!userId) {
+      console.log("❌ No userId - redirecting to /");
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
+    // User is authenticated - allow access
+    console.log("✅ User authenticated - allowing access to:", pathname);
+    return NextResponse.next();
   }
 
-  // User is authenticated - allow access
-  // Role-based routing is handled client-side in the sign-in page
-  console.log("✅ User authenticated - allowing access to:", pathname);
+  // All other routes are allowed
   return NextResponse.next();
 });
 

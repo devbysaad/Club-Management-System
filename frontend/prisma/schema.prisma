@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Pato Hornets Club Management System - Production Schema
+// Clerk = Authentication | Database = Authorization + Business Logic
 
 generator client {
   provider = "prisma-client-js"
@@ -13,18 +10,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// USER & ROLES
-/// =============
-model User {
-  id        String   @id @default(uuid())
+// ============================================
+// CORE: AppUser (Source of Truth for Roles)
+// ============================================
+// Clerk handles authentication, this handles authorization
+model AppUser {
+  id        String   @id // Clerk userId - DO NOT auto-generate
   email     String   @unique
-  password  String
   role      Role
+  status    UserStatus @default(ACTIVE)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  admin     Admin?
-  coach     Coach?
-  student   Student?
-  parent    Parent?
+  // One user can have ONE role-specific profile
+  admin   Admin?
+  coach   Coach?
+  student Student?
+  parent  Parent?
+
+  // Audit trail
+  activityLogs ActivityLog[]
+  
+  @@index([role])
+  @@index([status])
+  @@index([email])
 }
 
 enum Role {
@@ -34,9 +45,16 @@ enum Role {
   PARENT
 }
 
-/// =============
-/// SHARED ENUMS
-/// =============
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+// ============================================
+// SHARED ENUMS
+// ============================================
 enum Sex {
   MALE
   FEMALE
@@ -52,52 +70,72 @@ enum DayOfWeek {
   SUNDAY
 }
 
-/// =============
-/// PROFILES
-/// =============
+// ============================================
+// ROLE-SPECIFIC PROFILES
+// ============================================
 model Admin {
-  id        String @id @default(uuid())
-  userId    String @unique
+  id        String   @id @default(uuid())
+  userId    String   @unique
   firstName String
   lastName  String
   email     String?
   phone     String?
-  photo     String?
+  photo     String?  // URL to Clerk-managed photo
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Coach {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  displayId       String?  @unique
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  displayId       String?   @unique
   firstName       String
   lastName        String
   email           String?
   phone           String?
-  photo           String?
+  photo           String?   // URL to photo storage
   address         String?
   specialization  String[]
   sex             Sex
-  createdAt       DateTime @default(now())
   bloodType       String?
+  isDeleted       Boolean   @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ageGroups       CoachAgeGroup[]
-  sessions        TrainingSession[]
+  user      AppUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ageGroups CoachAgeGroup[]
+  sessions  TrainingSession[]
+
+  @@index([userId])
+  @@index([isDeleted])
 }
 
 model Parent {
-  id        String @id @default(uuid())
-  userId    String @unique
+  id        String    @id @default(uuid())
+  userId    String    @unique
   firstName String
   lastName  String
   email     String?
   phone     String?
   address   String?
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
   students  Student[]
+  payments  Payment[]
+
+  @@index([userId])
+  @@index([isDeleted])
 }
 
 model Student {
@@ -115,51 +153,88 @@ model Student {
   jerseyNumber Int?
   sex          Sex
   bloodType    String?
-  createdAt    DateTime   @default(now())
   parentId     String
-  ageGroupId  String
+  ageGroupId   String
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent      Parent      @relation(fields: [parentId], references: [id])
-  ageGroup    AgeGroup    @relation(fields: [ageGroupId], references: [id])
-
+  user        AppUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Parent       @relation(fields: [parentId], references: [id], onDelete: Restrict) // SOFT DELETE
+  ageGroup    AgeGroup     @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
   attendances Attendance[]
   results     Result[]
+  enrollments Enrollment[]
+  orders      Order[]
+
+  @@index([userId])
+  @@index([parentId])
+  @@index([ageGroupId])
+  @@index([isDeleted])
 }
 
-/// =============
-/// AGE GROUPS
-/// =============
+// ============================================
+// AGE GROUPS (Teams)
+// ============================================
 model AgeGroup {
-  id          String @id @default(uuid())
-  name        String @unique
+  id          String    @id @default(uuid())
+  name        String    @unique
   minAge      Int
   maxAge      Int
   capacity    Int
   description String?
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   students    Student[]
   sessions    TrainingSession[]
   fixtures    Fixture[]
   coaches     CoachAgeGroup[]
+  enrollments Enrollment[]
+
+  @@index([isDeleted])
 }
 
+// Join table for Coach <-> AgeGroup (many-to-many)
 model CoachAgeGroup {
-  id         String @id @default(uuid())
+  id         String   @id @default(uuid())
   coachId    String
   ageGroupId String
+  assignedAt DateTime @default(now())
 
   coach    Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
   ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
 
   @@unique([coachId, ageGroupId])
+  @@index([coachId])
+  @@index([ageGroupId])
 }
 
-/// =============
-/// TRAINING
-/// =============
+// Track student enrollment in age groups over time
+model Enrollment {
+  id         String    @id @default(uuid())
+  studentId  String
+  ageGroupId String
+  enrolledAt DateTime  @default(now())
+  exitedAt   DateTime?
+  isActive   Boolean   @default(true)
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
+
+  @@index([studentId])
+  @@index([ageGroupId])
+  @@index([isActive])
+}
+
+// ============================================
+// TRAINING SESSIONS
+// ============================================
 model TrainingSession {
-  id          String               @id @default(uuid())
+  id          String              @id @default(uuid())
   title       String
   description String?
   date        DateTime
@@ -168,12 +243,21 @@ model TrainingSession {
   dayOfWeek   DayOfWeek
   venue       String
   type        TrainingSessionType
-  coachId     String
+  coachId     String  // OWNERSHIP: Coach can only edit their own
   ageGroupId  String
+  isDeleted   Boolean             @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  coach       Coach                @relation(fields: [coachId], references: [id])
-  ageGroup    AgeGroup             @relation(fields: [ageGroupId], references: [id])
+  coach       Coach       @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  ageGroup    AgeGroup    @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
   attendances Attendance[]
+
+  @@index([coachId])
+  @@index([ageGroupId])
+  @@index([date])
+  @@index([isDeleted])
 }
 
 enum TrainingSessionType {
@@ -185,20 +269,26 @@ enum TrainingSessionType {
   RECOVERY
 }
 
-/// =============
-/// ATTENDANCE
-/// =============
+// ============================================
+// ATTENDANCE
+// ============================================
 model Attendance {
-  id                String            @id @default(uuid())
+  id                String           @id @default(uuid())
   studentId         String
   trainingSessionId String
   status            AttendanceStatus
   notes             String?
-  markedAt          DateTime          @default(now())
-  markedBy          String
+  markedAt          DateTime         @default(now())
+  markedBy          String           // Clerk userId of coach
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  student           Student           @relation(fields: [studentId], references: [id])
-  trainingSession   TrainingSession   @relation(fields: [trainingSessionId], references: [id])
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([trainingSessionId])
+  @@index([markedBy])
 }
 
 enum AttendanceStatus {
@@ -208,9 +298,9 @@ enum AttendanceStatus {
   EXCUSED
 }
 
-/// =============
-/// FIXTURES & RESULTS
-/// =============
+// ============================================
+// FIXTURES & RESULTS
+// ============================================
 model Fixture {
   id           String      @id @default(uuid())
   title        String
@@ -224,9 +314,17 @@ model Fixture {
   goalsFor     Int         @default(0)
   goalsAgainst Int         @default(0)
   ageGroupId   String
+  isDeleted    Boolean     @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id])
+  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
   results  Result[]
+
+  @@index([ageGroupId])
+  @@index([date])
+  @@index([isDeleted])
 }
 
 enum FixtureType {
@@ -237,24 +335,29 @@ enum FixtureType {
 }
 
 model Result {
-  id            String @id @default(uuid())
+  id            String   @id @default(uuid())
   studentId     String
   fixtureId     String
-  goals         Int     @default(0)
-  assists       Int     @default(0)
-  rating        Float   @default(0)
-  minutesPlayed Int     @default(0)
-  yellowCards   Int     @default(0)
-  redCards      Int     @default(0)
+  goals         Int      @default(0)
+  assists       Int      @default(0)
+  rating        Float    @default(0)
+  minutesPlayed Int      @default(0)
+  yellowCards   Int      @default(0)
+  redCards      Int      @default(0)
   notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  student Student @relation(fields: [studentId], references: [id])
-  fixture Fixture @relation(fields: [fixtureId], references: [id])
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fixture Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([fixtureId])
 }
 
-/// =============
-/// EVENTS
-/// =============
+// ============================================
+// EVENTS
+// ============================================
 model Event {
   id          String    @id @default(uuid())
   title       String
@@ -264,6 +367,13 @@ model Event {
   endTime     DateTime
   venue       String
   type        EventType
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([date])
+  @@index([isDeleted])
 }
 
 enum EventType {
@@ -275,73 +385,273 @@ enum EventType {
   OTHER
 }
 
-/// =============
-/// ANNOUNCEMENTS
-/// =============
+// ============================================
+// ANNOUNCEMENTS
+// ============================================
 model Announcement {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   content     String
-  priority    Int      @default(1)
+  priority    Int       @default(1)
   targetRoles Role[]
-  publishedAt DateTime @default(now())
+  publishedAt DateTime  @default(now())
   expiresAt   DateTime?
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([publishedAt])
+  @@index([expiresAt])
+  @@index([isDeleted])
 }
 
+// ============================================
+// SHOP: Products & Orders
+// ============================================
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  category    ProductCategory
+  sizes       String[]      // ["S", "M", "L", "XL"]
+  stock       Int           @default(0)
+  images      String[]      // URLs to image storage
+  isActive    Boolean       @default(true)
+  isDeleted   Boolean       @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdBy   String        // Admin userId
 
-/// =============
-/// JERSEY ORDERS
-/// =============
+  orderItems OrderItem[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([isDeleted])
+}
+
+enum ProductCategory {
+  JERSEY
+  SHORTS
+  SOCKS
+  TRAINING_KIT
+  ACCESSORIES
+  OTHER
+}
+
 model Order {
   id            String      @id @default(cuid())
-  userId        String
+  userId        String      // Student or Parent userId
   customerName  String
   contactNumber String
   email         String
-  shirtSize     String
-  shortsSize    String
-  socksSize     String
-  jerseyName    String
-  jerseyNumber  Int
-  customLength  String?     // Custom length measurement
-  customWidth   String?     // Custom width/chest measurement  
-  customNotes   String?     // Additional custom measurements
+  shippingAddress String?
+  totalAmount   Float?
+  
+  // Jersey-specific fields
+  shirtSize     String?
+  shortsSize    String?
+  socksSize     String?
+  jerseyName    String?
+  jerseyNumber  Int?
+  customLength  String?
+  customWidth   String?
+  customNotes   String?
+  
   status        OrderStatus @default(PENDING)
+  notes         String?
+  isDeleted     Boolean     @default(false) // SOFT DELETE - financial data
+  deletedAt     DateTime?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  student Student?    @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  items   OrderItem[]
+  payments Payment[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([isDeleted])
 }
 
 enum OrderStatus {
   PENDING
   PROCESSING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  size      String
+  price     Float    // Snapshot price at time of order
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ============================================
+// PAYMENTS (Ready for Stripe integration)
+// ============================================
+model Payment {
+  id              String        @id @default(uuid())
+  orderId         String
+  parentId        String?       // Who made the payment
+  amount          Float
+  currency        String        @default("USD")
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  provider        String?       // "stripe", "mock", "cash"
+  providerRef     String?       // Stripe payment intent ID
+  providerRawData Json?         // Full Stripe response
+  notes           String?
+  processedAt     DateTime?
+  createdBy       String        // Admin or parent userId
+  isDeleted       Boolean       @default(false) // SOFT DELETE - financial data
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  parent Parent? @relation(fields: [parentId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([parentId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([isDeleted])
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CASH
+  PAYPAL
+  STRIPE
+  MOCK
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
   COMPLETED
+  FAILED
+  REFUNDED
   CANCELLED
 }
 
-/// =============
-/// ADMISSIONS
-/// =============
+// ============================================
+// ADMISSIONS
+// ============================================
 model Admission {
-  id           String          @id @default(cuid())
-  firstName    String
-  lastName     String
-  email        String
-  phone        String
-  dateOfBirth  DateTime
-  sex          Sex
-  address      String
-  parentName   String
-  parentPhone  String
-  position     String?         // Preferred playing position
-  notes        String?         // Additional information
-  status       AdmissionStatus @default(PENDING)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id             String          @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String
+  phone          String
+  dateOfBirth    DateTime
+  sex            Sex
+  address        String
+  parentName     String
+  parentPhone    String
+  parentEmail    String?
+  position       String?
+  notes          String?
+  status         AdmissionStatus @default(PENDING)
+  reviewedBy     String?         // Admin userId
+  reviewedAt     DateTime?
+  reviewNotes    String?
+  convertedToStudentId String?   // Track if converted
+  isDeleted      Boolean         @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([isDeleted])
 }
 
 enum AdmissionStatus {
   PENDING
-  REVIEWING
-  ACCEPTED
+  UNDER_REVIEW
+  APPROVED
   REJECTED
+  CONVERTED
+}
+
+// ============================================
+// FILE STORAGE TRACKING
+// ============================================
+model FileUpload {
+  id           String   @id @default(uuid())
+  url          String
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  uploadedBy   String   // userId
+  entityType   String?  // "product", "student", "coach"
+  entityId     String?  // Reference to entity
+  provider     String   @default("cloudinary") // or "s3", "clerk"
+  providerRef  String?  // Cloudinary public_id
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([uploadedBy])
+  @@index([isDeleted])
+}
+
+// ============================================
+// AUDIT & ACTIVITY LOGS
+// ============================================
+model ActivityLog {
+  id          String   @id @default(uuid())
+  action      String   // "CREATE_STUDENT", "UPDATE_ORDER", "DELETE_COACH"
+  performedBy String   // userId
+  targetType  String?  // "Student", "Order", "Coach"
+  targetId    String?
+  details     Json?    // Flexible metadata
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user AppUser @relation(fields: [performedBy], references: [id], onDelete: Cascade)
+
+  @@index([performedBy])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// ============================================
+// CLERK WEBHOOK SYNC LOG
+// ============================================
+model ClerkSyncLog {
+  id          String   @id @default(uuid())
+  clerkUserId String
+  eventType   String   // "user.created", "user.updated", "user.deleted"
+  payload     Json
+  status      String   // "success", "failed", "pending"
+  error       String?
+  processedAt DateTime @default(now())
+
+  @@index([clerkUserId])
+  @@index([eventType])
+  @@index([processedAt])
 }

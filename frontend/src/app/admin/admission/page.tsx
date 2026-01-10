@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getAllAdmissions } from "@/lib/admission-actions";
 import Link from "next/link";
+import DeleteAdmissionButton from "@/components/DeleteAdmissionButton";
 
 const AdminAdmissionsPage = async () => {
     const user = await currentUser();
@@ -66,12 +67,15 @@ const AdminAdmissionsPage = async () => {
                                             {new Date(admission.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="p-3">
-                                            <Link
-                                                href={`/admin/admission/${admission.id}`}
-                                                className="text-rmBlue hover:text-rmBlueDark font-semibold text-sm transition-colors"
-                                            >
-                                                View Details →
-                                            </Link>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={`/admin/admission/${admission.id}`}
+                                                    className="text-rmBlue hover:text-rmBlueDark font-semibold text-sm transition-colors"
+                                                >
+                                                    View Details →
+                                                </Link>
+                                                <DeleteAdmissionButton admissionId={admission.id} applicantName={`${admission.firstName} ${admission.lastName}`} />
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

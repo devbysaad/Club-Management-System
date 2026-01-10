@@ -6,6 +6,8 @@
 import { z } from "zod";
 import prisma from "./prisma";
 import { revalidatePath } from "next/cache";
+import { clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 
 const admissionSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -76,16 +78,25 @@ export const getAdmissionById = async (id: string) => {
 
 export const updateAdmissionStatus = async (id: string, status: "PENDING" | "REVIEWING" | "ACCEPTED" | "REJECTED") => {
     try {
+        console.log("[UPDATE_STATUS] Updating admission:", id, "to", status);
+
         await prisma.admission.update({
             where: { id },
             data: { status },
         });
+
         revalidatePath("/admin/admission");
         revalidatePath(`/admin/admission/${id}`);
+
+        console.log("[UPDATE_STATUS] Success");
         return { success: true, error: false };
-    } catch (err) {
-        console.error("Update Admission Status Error:", err);
-        return { success: false, error: true };
+    } catch (err: any) {
+        console.error("[UPDATE_STATUS] Error:", err);
+        return {
+            success: false,
+            error: true,
+            message: err.message || "Failed to update status"
+        };
     }
 };
 
@@ -99,5 +110,186 @@ export const deleteAdmission = async (id: string) => {
     } catch (err) {
         console.error("Delete Admission Error:", err);
         return { success: false, error: true };
+    }
+};
+
+// ============================================
+// APPROVE ADMISSION WORKFLOW
+// ============================================
+export const approveAdmission = async (admissionId: string, ageGroupName: string) => {
+    try {
+        console.log("[APPROVE_ADMISSION] Starting for:", admissionId, "Age Group:", ageGroupName);
+
+        // 1. Get admission details
+        const admission = await prisma.admission.findUnique({
+            where: { id: admissionId },
+        });
+
+        if (!admission) {
+            return { success: false, error: true, message: "Admission not found" };
+        }
+
+        if (admission.status === "CONVERTED") {
+            return { success: false, error: true, message: "Admission already approved" };
+        }
+
+        // 2. Find or create age group
+        let ageGroup = await prisma.ageGroup.findFirst({
+            where: { name: ageGroupName },
+        });
+
+        if (!ageGroup) {
+            // Create age group if it doesn't exist  
+            ageGroup = await prisma.ageGroup.create({
+                data: {
+                    name: ageGroupName,
+                    description: `${ageGroupName} age group`,
+                    minAge: 0,
+                    maxAge: 100,
+                    capacity: 50,
+                },
+            });
+        }
+
+        console.log("[APPROVE_ADMISSION] Age group found/created:", ageGroup.id);
+
+        // 3. Create Clerk user for parent
+        console.log("[APPROVE_ADMISSION] Creating parent Clerk user");
+        const parentClerkUser = await clerkClient.users.createUser({
+            emailAddress: [admission.email],
+            firstName: admission.parentName.split(" ")[0],
+            lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
+            publicMetadata: { role: "parent" },
+            skipPasswordRequirement: true,
+        });
+
+        console.log("[APPROVE_ADMISSION] Parent Clerk user created:", parentClerkUser.id);
+
+        // 4. Create Parent profile
+        const parent = await prisma.parent.create({
+            data: {
+                userId: parentClerkUser.id,
+                firstName: admission.parentName.split(" ")[0],
+                lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
+                email: admission.email,
+                phone: admission.parentPhone,
+                address: admission.address,
+            },
+        });
+
+        console.log("[APPROVE_ADMISSION] Parent DB record created:", parent.id);
+
+        // 5. Create Clerk user for student
+        console.log("[APPROVE_ADMISSION] Creating student Clerk user");
+        const studentClerkUser = await clerkClient.users.createUser({
+            emailAddress: [`${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`],
+            firstName: admission.firstName,
+            lastName: admission.lastName,
+            publicMetadata: { role: "student" },
+            skipPasswordRequirement: true,
+        });
+
+        console.log("[APPROVE_ADMISSION] Student Clerk user created:", studentClerkUser.id);
+
+        // 6. Create Student profile
+        const student = await prisma.student.create({
+            data: {
+                userId: studentClerkUser.id,
+                firstName: admission.firstName,
+                lastName: admission.lastName,
+                email: `${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`,
+                phone: admission.phone,
+                dateOfBirth: admission.dateOfBirth,
+                address: admission.address,
+                position: admission.position,
+                sex: admission.sex,
+                parentId: parent.id,
+                ageGroupId: ageGroup.id,
+            },
+        });
+
+        console.log("[APPROVE_ADMISSION] Student DB record created:", student.id);
+
+        // 7. Send Clerk invitations
+        console.log("[APPROVE_ADMISSION] Sending invitations");
+        await clerkClient.invitations.createInvitation({
+            emailAddress: admission.email,
+            publicMetadata: { role: "parent", userId: parentClerkUser.id },
+            redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/sign-in`,
+        });
+
+        // 8. Update admission status
+        await prisma.admission.update({
+            where: { id: admissionId },
+            data: {
+                status: "CONVERTED",
+            },
+        });
+
+        console.log("[APPROVE_ADMISSION] Success!");
+
+        revalidatePath("/admin/admission");
+        revalidatePath("/list/students");
+        revalidatePath("/list/parents");
+
+        return {
+            success: true,
+            error: false,
+            message: `Admission approved! Student ${admission.firstName} ${admission.lastName} created successfully.`,
+        };
+    } catch (err: any) {
+        console.error("[APPROVE_ADMISSION] Error:", err);
+
+        // Handle specific Clerk errors
+        if (err.errors?.[0]?.code === "form_identifier_exists") {
+            return {
+                success: false,
+                error: true,
+                message: "Email already registered. Please use a different email or contact support.",
+            };
+        }
+
+        return {
+            success: false,
+            error: true,
+            message: `Failed to approve admission: ${err.message || "Unknown error"}`,
+        };
+    }
+};
+
+// ============================================
+// REJECT ADMISSION WORKFLOW
+// ============================================
+export const rejectAdmission = async (admissionId: string, reason?: string) => {
+    try {
+        console.log("[REJECT_ADMISSION] Rejecting:", admissionId);
+
+        const { userId } = await auth();
+
+        await prisma.admission.update({
+            where: { id: admissionId },
+            data: {
+                status: "REJECTED",
+                notes: reason ? `${reason}\n\nRejected by admin.` : "Rejected by admin",
+            },
+        });
+
+        console.log("[REJECT_ADMISSION] Success");
+
+        revalidatePath("/admin/admission");
+        revalidatePath(`/admin/admission/${admissionId}`);
+
+        return {
+            success: true,
+            error: false,
+            message: "Admission rejected successfully",
+        };
+    } catch (err: any) {
+        console.error("[REJECT_ADMISSION] Error:", err);
+        return {
+            success: false,
+            error: true,
+            message: `Failed to reject admission: ${err.message || "Unknown error"}`,
+        };
     }
 };

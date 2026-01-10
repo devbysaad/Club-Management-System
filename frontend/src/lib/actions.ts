@@ -14,862 +14,1238 @@ import {
     AttendanceSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
-import { clerkClient } from "@clerk/nextjs/server";
+import {
+    withRole,
+    withTransaction,
+    ActionResult,
+    sendClerkInvitation,
+    logActivity,
+    softDelete,
+    hardDelete,
+    getCurrentUser,
+    coachOwnsAgeGroup,
+    parentOwnsStudent,
+} from "./action-helpers";
+import { Role } from "@prisma/client";
 
-type CurrentState = { success: boolean; error: boolean };
+type CurrentState = ActionResult;
 
 // ============================================
-// COACH ACTIONS (adapted from Teacher)
+// COACH ACTIONS
 // ============================================
+
 export const createCoach = async (
     currentState: CurrentState,
     data: CoachSchema
-) => {
-    try {
-        const user = await clerkClient.users.createUser({
-            username: data.username,
-            password: data.password,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            publicMetadata: { role: "coach" },
-        });
-
-        await prisma.coach.create({
-            data: {
-                userId: user.id,
-                displayId: data.displayId,
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            // 1. Send Clerk invitation (creates user, sends email)
+            const inviteResult = await sendClerkInvitation({
+                email: data.email!,
+                role: Role.COACH,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-                photo: data.photo || null,
-                specialization: data.specialization || [],
-                sex: data.sex,
-                bloodType: data.bloodType || null,
-            },
-        });
+            });
 
-        revalidatePath("/list/coaches");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            if (!inviteResult.success) {
+                return inviteResult;
+            }
+
+            const clerkUserId = inviteResult.data!.clerkUserId;
+
+            // 2. Create AppUser record
+            await tx.appUser.create({
+                data: {
+                    id: clerkUserId,
+                    email: data.email!,
+                    role: Role.COACH,
+                    status: "ACTIVE",
+                },
+            });
+
+            // 3. Create Coach profile
+            const coach = await tx.coach.create({
+                data: {
+                    userId: clerkUserId,
+                    displayId: data.displayId,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                    address: data.address,
+                    photo: data.photo,
+                    specialization: data.specialization || [],
+                    sex: data.sex,
+                    bloodType: data.bloodType,
+                },
+            });
+
+            // 4. Assign to age groups if provided
+            if (data.ageGroups && data.ageGroups.length > 0) {
+                await tx.coachAgeGroup.createMany({
+                    data: data.ageGroups.map((ageGroupId) => ({
+                        coachId: coach.id,
+                        ageGroupId,
+                    })),
+                });
+            }
+
+            // 5. Log activity
+            await logActivity({
+                action: "CREATE_COACH",
+                performedBy: user.id,
+                targetType: "Coach",
+                targetId: coach.id,
+                details: { firstName: data.firstName, lastName: data.lastName },
+            });
+
+            revalidatePath("/list/teachers");
+            revalidatePath("/list/coaches");
+
+            return {
+                success: true,
+                error: false,
+                message: `Coach ${data.firstName} ${data.lastName} created and invitation sent to ${data.email}`,
+            };
+        });
+    });
 };
 
 export const updateCoach = async (
     currentState: CurrentState,
     data: CoachSchema
-) => {
+): Promise<ActionResult> => {
     if (!data.id) {
-        return { success: false, error: true };
+        return { success: false, error: true, message: "Coach ID is required" };
     }
-    try {
-        await clerkClient.users.updateUser(data.userId!, {
-            firstName: data.firstName,
-            lastName: data.lastName,
-        });
 
-        await prisma.coach.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                displayId: data.displayId,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-                photo: data.photo || null,
-                specialization: data.specialization || [],
-                sex: data.sex,
-                bloodType: data.bloodType || null,
-            },
-        });
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            // 1. Update Coach profile
+            const coach = await tx.coach.update({
+                where: { id: data.id },
+                data: {
+                    displayId: data.displayId,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                    address: data.address,
+                    photo: data.photo,
+                    specialization: data.specialization || [],
+                    sex: data.sex,
+                    bloodType: data.bloodType,
+                },
+            });
 
-        revalidatePath("/list/coaches");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            // 2. Update age group assignments (delete old, create new)
+            if (data.ageGroups) {
+                await tx.coachAgeGroup.deleteMany({
+                    where: { coachId: coach.id },
+                });
+
+                if (data.ageGroups.length > 0) {
+                    await tx.coachAgeGroup.createMany({
+                        data: data.ageGroups.map((ageGroupId) => ({
+                            coachId: coach.id,
+                            ageGroupId,
+                        })),
+                    });
+                }
+            }
+
+            // 3. Log activity
+            await logActivity({
+                action: "UPDATE_COACH",
+                performedBy: user.id,
+                targetType: "Coach",
+                targetId: coach.id,
+                details: data,
+            });
+
+            revalidatePath("/list/teachers");
+            revalidatePath("/list/coaches");
+
+            return {
+                success: true,
+                error: false,
+                message: "Coach updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteCoach = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        const coach = await prisma.coach.findUnique({ where: { id } });
-        if (coach) {
-            await clerkClient.users.deleteUser(coach.userId);
+
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for coaches (they might have historical data)
+        const result = await softDelete(prisma.coach, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_COACH",
+                performedBy: user.id,
+                targetType: "Coach",
+                targetId: id,
+            });
+
+            revalidatePath("/list/teachers");
+            revalidatePath("/list/coaches");
         }
 
-        await prisma.coach.delete({
-            where: {
-                id: id,
-            },
-        });
-
-        revalidatePath("/list/coaches");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+        return result;
+    });
 };
 
 // ============================================
 // STUDENT ACTIONS
 // ============================================
+
 export const createStudent = async (
     currentState: CurrentState,
     data: StudentSchema
-) => {
-    try {
-        const ageGroup = await prisma.ageGroup.findUnique({
-            where: { id: data.ageGroupId },
-            include: { _count: { select: { students: true } } },
-        });
-
-        if (ageGroup && ageGroup.capacity === ageGroup._count.students) {
-            return { success: false, error: true };
-        }
-
-        const user = await clerkClient.users.createUser({
-            username: data.username,
-            password: data.password,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            publicMetadata: { role: "student" },
-        });
-
-        await prisma.student.create({
-            data: {
-                userId: user.id,
-                displayId: data.displayId,
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            // 1. Send Clerk invitation
+            const inviteResult = await sendClerkInvitation({
+                email: data.email!,
+                role: Role.STUDENT,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-                photo: data.photo || null,
-                dateOfBirth: data.dateOfBirth,
-                position: data.position || null,
-                jerseyNumber: data.jerseyNumber || null,
-                sex: data.sex,
-                bloodType: data.bloodType || null,
-                ageGroupId: data.ageGroupId,
-                parentId: data.parentId,
-            },
-        });
+            });
 
-        revalidatePath("/list/students");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            if (!inviteResult.success) {
+                return inviteResult;
+            }
+
+            const clerkUserId = inviteResult.data!.clerkUserId;
+
+            // 2. Create AppUser
+            await tx.appUser.create({
+                data: {
+                    id: clerkUserId,
+                    email: data.email!,
+                    role: Role.STUDENT,
+                    status: "ACTIVE",
+                },
+            });
+
+            // 3. Create Student profile
+            const student = await tx.student.create({
+                data: {
+                    userId: clerkUserId,
+                    displayId: data.displayId,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    dateOfBirth: new Date(data.dateOfBirth),
+                    photo: data.photo,
+                    phone: data.phone,
+                    address: data.address,
+                    position: data.position,
+                    jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+                    sex: data.sex,
+                    bloodType: data.bloodType,
+                    parentId: data.parentId,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
+
+            // 4. Create enrollment record
+            await tx.enrollment.create({
+                data: {
+                    studentId: student.id,
+                    ageGroupId: data.ageGroupId,
+                    isActive: true,
+                },
+            });
+
+            // 5. Log activity
+            await logActivity({
+                action: "CREATE_STUDENT",
+                performedBy: user.id,
+                targetType: "Student",
+                targetId: student.id,
+                details: { firstName: data.firstName, lastName: data.lastName },
+            });
+
+            revalidatePath("/list/students");
+
+            return {
+                success: true,
+                error: false,
+                message: `Student ${data.firstName} ${data.lastName} created and invitation sent`,
+            };
+        });
+    });
 };
 
 export const updateStudent = async (
     currentState: CurrentState,
     data: StudentSchema
-) => {
+): Promise<ActionResult> => {
     if (!data.id) {
-        return { success: false, error: true };
+        return { success: false, error: true, message: "Student ID is required" };
     }
-    try {
-        await clerkClient.users.updateUser(data.userId!, {
-            firstName: data.firstName,
-            lastName: data.lastName,
-        });
 
-        await prisma.student.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                displayId: data.displayId,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-                photo: data.photo || null,
-                dateOfBirth: data.dateOfBirth,
-                position: data.position || null,
-                jerseyNumber: data.jerseyNumber || null,
-                sex: data.sex,
-                bloodType: data.bloodType || null,
-                ageGroupId: data.ageGroupId,
-                parentId: data.parentId,
-            },
-        });
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const student = await tx.student.update({
+                where: { id: data.id },
+                data: {
+                    displayId: data.displayId,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    dateOfBirth: new Date(data.dateOfBirth),
+                    photo: data.photo,
+                    phone: data.phone,
+                    address: data.address,
+                    position: data.position,
+                    jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+                    sex: data.sex,
+                    bloodType: data.bloodType,
+                    parentId: data.parentId,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
 
-        revalidatePath("/list/students");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "UPDATE_STUDENT",
+                performedBy: user.id,
+                targetType: "Student",
+                targetId: student.id,
+                details: data,
+            });
+
+            revalidatePath("/list/students");
+
+            return {
+                success: true,
+                error: false,
+                message: "Student updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteStudent = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        const student = await prisma.student.findUnique({ where: { id } });
-        if (student) {
-            await clerkClient.users.deleteUser(student.userId);
+
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for students (financial/historical data)
+        const result = await softDelete(prisma.student, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_STUDENT",
+                performedBy: user.id,
+                targetType: "Student",
+                targetId: id,
+            });
+
+            revalidatePath("/list/students");
         }
 
-        await prisma.student.delete({
-            where: {
-                id: id,
-            },
-        });
-
-        revalidatePath("/list/students");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+        return result;
+    });
 };
 
 // ============================================
 // PARENT ACTIONS
 // ============================================
+
 export const createParent = async (
     currentState: CurrentState,
     data: ParentSchema
-) => {
-    try {
-        const user = await clerkClient.users.createUser({
-            username: data.username,
-            password: data.password,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            publicMetadata: { role: "parent" },
-        });
-
-        await prisma.parent.create({
-            data: {
-                userId: user.id,
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const inviteResult = await sendClerkInvitation({
+                email: data.email!,
+                role: Role.PARENT,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-            },
-        });
+            });
 
-        revalidatePath("/list/parents");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            if (!inviteResult.success) {
+                return inviteResult;
+            }
+
+            const clerkUserId = inviteResult.data!.clerkUserId;
+
+            await tx.appUser.create({
+                data: {
+                    id: clerkUserId,
+                    email: data.email!,
+                    role: Role.PARENT,
+                    status: "ACTIVE",
+                },
+            });
+
+            const parent = await tx.parent.create({
+                data: {
+                    userId: clerkUserId,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                    address: data.address,
+                },
+            });
+
+            await logActivity({
+                action: "CREATE_PARENT",
+                performedBy: user.id,
+                targetType: "Parent",
+                targetId: parent.id,
+                details: { firstName: data.firstName, lastName: data.lastName },
+            });
+
+            revalidatePath("/list/parents");
+
+            return {
+                success: true,
+                error: false,
+                message: `Parent ${data.firstName} ${data.lastName} created and invitation sent`,
+            };
+        });
+    });
 };
 
 export const updateParent = async (
     currentState: CurrentState,
     data: ParentSchema
-) => {
+): Promise<ActionResult> => {
     if (!data.id) {
-        return { success: false, error: true };
+        return { success: false, error: true, message: "Parent ID is required" };
     }
-    try {
-        await clerkClient.users.updateUser(data.userId!, {
-            firstName: data.firstName,
-            lastName: data.lastName,
-        });
 
-        await prisma.parent.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email || null,
-                phone: data.phone || null,
-                address: data.address || null,
-            },
-        });
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const parent = await tx.parent.update({
+                where: { id: data.id },
+                data: {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                    address: data.address,
+                },
+            });
 
-        revalidatePath("/list/parents");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "UPDATE_PARENT",
+                performedBy: user.id,
+                targetType: "Parent",
+                targetId: parent.id,
+                details: data,
+            });
+
+            revalidatePath("/list/parents");
+
+            return {
+                success: true,
+                error: false,
+                message: "Parent updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteParent = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        const parent = await prisma.parent.findUnique({ where: { id } });
-        if (parent) {
-            await clerkClient.users.deleteUser(parent.userId);
+
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for parents (financial data)
+        const result = await softDelete(prisma.parent, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_PARENT",
+                performedBy: user.id,
+                targetType: "Parent",
+                targetId: id,
+            });
+
+            revalidatePath("/list/parents");
         }
 
-        await prisma.parent.delete({
-            where: {
-                id: id,
-            },
-        });
-
-        revalidatePath("/list/parents");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+        return result;
+    });
 };
 
 // ============================================
-// AGE GROUP ACTIONS (adapted from Class)
+// AGE GROUP ACTIONS
 // ============================================
+
 export const createAgeGroup = async (
     currentState: CurrentState,
     data: AgeGroupSchema
-) => {
-    try {
-        await prisma.ageGroup.create({
-            data: {
-                name: data.name,
-                minAge: data.minAge,
-                maxAge: data.maxAge,
-                capacity: data.capacity,
-                description: data.description || null,
-            },
-        });
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const ageGroup = await tx.ageGroup.create({
+                data: {
+                    name: data.name,
+                    minAge: parseInt(data.minAge),
+                    maxAge: parseInt(data.maxAge),
+                    capacity: parseInt(data.capacity),
+                    description: data.description,
+                },
+            });
 
-        revalidatePath("/list/ageGroups");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "CREATE_AGE_GROUP",
+                performedBy: user.id,
+                targetType: "AgeGroup",
+                targetId: ageGroup.id,
+                details: { name: data.name },
+            });
+
+            revalidatePath("/list/classes");
+
+            return {
+                success: true,
+                error: false,
+                message: `Age group "${data.name}" created successfully`,
+            };
+        });
+    });
 };
 
 export const updateAgeGroup = async (
     currentState: CurrentState,
     data: AgeGroupSchema
-) => {
-    try {
-        await prisma.ageGroup.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                name: data.name,
-                minAge: data.minAge,
-                maxAge: data.maxAge,
-                capacity: data.capacity,
-                description: data.description || null,
-            },
-        });
-
-        revalidatePath("/list/ageGroups");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Age group ID is required" };
     }
+
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const ageGroup = await tx.ageGroup.update({
+                where: { id: data.id },
+                data: {
+                    name: data.name,
+                    minAge: parseInt(data.minAge),
+                    maxAge: parseInt(data.maxAge),
+                    capacity: parseInt(data.capacity),
+                    description: data.description,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_AGE_GROUP",
+                performedBy: user.id,
+                targetType: "AgeGroup",
+                targetId: ageGroup.id,
+                details: data,
+            });
+
+            revalidatePath("/list/classes");
+
+            return {
+                success: true,
+                error: false,
+                message: "Age group updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteAgeGroup = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        await prisma.ageGroup.delete({
-            where: {
-                id: id,
-            },
-        });
 
-        revalidatePath("/list/ageGroups");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for age groups (historical data)
+        const result = await softDelete(prisma.ageGroup, id);
 
-// ============================================
-// TRAINING SESSION ACTIONS (adapted from Lesson)
-// ============================================
-export const createTrainingSession = async (
-    currentState: CurrentState,
-    data: TrainingSessionSchema
-) => {
-    try {
-        await prisma.trainingSession.create({
-            data: {
-                title: data.title,
-                description: data.description || null,
-                date: data.date,
-                startTime: data.startTime,
-                endTime: data.endTime,
-                dayOfWeek: data.dayOfWeek,
-                venue: data.venue,
-                type: data.type,
-                coachId: data.coachId,
-                ageGroupId: data.ageGroupId,
-            },
-        });
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_AGE_GROUP",
+                performedBy: user.id,
+                targetType: "AgeGroup",
+                targetId: id,
+            });
 
-        revalidatePath("/list/trainingSessions");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
+            revalidatePath("/list/classes");
+        }
 
-export const updateTrainingSession = async (
-    currentState: CurrentState,
-    data: TrainingSessionSchema
-) => {
-    try {
-        await prisma.trainingSession.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                title: data.title,
-                description: data.description || null,
-                date: data.date,
-                startTime: data.startTime,
-                endTime: data.endTime,
-                dayOfWeek: data.dayOfWeek,
-                venue: data.venue,
-                type: data.type,
-                coachId: data.coachId,
-                ageGroupId: data.ageGroupId,
-            },
-        });
-
-        revalidatePath("/list/trainingSessions");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
-
-export const deleteTrainingSession = async (
-    currentState: CurrentState,
-    data: FormData
-) => {
-    const id = data.get("id") as string;
-    try {
-        await prisma.trainingSession.delete({
-            where: {
-                id: id,
-            },
-        });
-
-        revalidatePath("/list/trainingSessions");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
-
-// ============================================
-// FIXTURE ACTIONS (adapted from Exam)
-// ============================================
-export const createFixture = async (
-    currentState: CurrentState,
-    data: FixtureSchema
-) => {
-    try {
-        await prisma.fixture.create({
-            data: {
-                title: data.title,
-                opponent: data.opponent,
-                date: data.date,
-                time: data.time,
-                venue: data.venue,
-                isHome: data.isHome,
-                type: data.type,
-                isCompleted: data.isCompleted,
-                goalsFor: data.goalsFor,
-                goalsAgainst: data.goalsAgainst,
-                ageGroupId: data.ageGroupId,
-            },
-        });
-
-        revalidatePath("/list/fixtures");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
-
-export const updateFixture = async (
-    currentState: CurrentState,
-    data: FixtureSchema
-) => {
-    try {
-        await prisma.fixture.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                title: data.title,
-                opponent: data.opponent,
-                date: data.date,
-                time: data.time,
-                venue: data.venue,
-                isHome: data.isHome,
-                type: data.type,
-                isCompleted: data.isCompleted,
-                goalsFor: data.goalsFor,
-                goalsAgainst: data.goalsAgainst,
-                ageGroupId: data.ageGroupId,
-            },
-        });
-
-        revalidatePath("/list/fixtures");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
-};
-
-export const deleteFixture = async (
-    currentState: CurrentState,
-    data: FormData
-) => {
-    const id = data.get("id") as string;
-    try {
-        await prisma.fixture.delete({
-            where: {
-                id: id,
-            },
-        });
-
-        revalidatePath("/list/fixtures");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+        return result;
+    });
 };
 
 // ============================================
 // EVENT ACTIONS
 // ============================================
+
 export const createEvent = async (
     currentState: CurrentState,
     data: EventSchema
-) => {
-    try {
-        await prisma.event.create({
-            data: {
-                title: data.title,
-                description: data.description || null,
-                date: data.date,
-                startTime: data.startTime,
-                endTime: data.endTime,
-                venue: data.venue,
-                type: data.type,
-            },
-        });
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const event = await tx.event.create({
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    date: new Date(data.date),
+                    startTime: new Date(data.startTime),
+                    endTime: new Date(data.endTime),
+                    venue: data.venue,
+                    type: data.type,
+                },
+            });
 
-        revalidatePath("/list/events");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "CREATE_EVENT",
+                performedBy: user.id,
+                targetType: "Event",
+                targetId: event.id,
+                details: { title: data.title },
+            });
+
+            revalidatePath("/list/events");
+
+            return {
+                success: true,
+                error: false,
+                message: `Event "${data.title}" created successfully`,
+            };
+        });
+    });
 };
 
 export const updateEvent = async (
     currentState: CurrentState,
     data: EventSchema
-) => {
-    try {
-        await prisma.event.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                title: data.title,
-                description: data.description || null,
-                date: data.date,
-                startTime: data.startTime,
-                endTime: data.endTime,
-                venue: data.venue,
-                type: data.type,
-            },
-        });
-
-        revalidatePath("/list/events");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Event ID is required" };
     }
+
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const event = await tx.event.update({
+                where: { id: data.id },
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    date: new Date(data.date),
+                    startTime: new Date(data.startTime),
+                    endTime: new Date(data.endTime),
+                    venue: data.venue,
+                    type: data.type,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_EVENT",
+                performedBy: user.id,
+                targetType: "Event",
+                targetId: event.id,
+                details: data,
+            });
+
+            revalidatePath("/list/events");
+
+            return {
+                success: true,
+                error: false,
+                message: "Event updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteEvent = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        await prisma.event.delete({
-            where: {
-                id: id,
-            },
-        });
 
-        revalidatePath("/list/events");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for events
+        const result = await softDelete(prisma.event, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_EVENT",
+                performedBy: user.id,
+                targetType: "Event",
+                targetId: id,
+            });
+
+            revalidatePath("/list/events");
+        }
+
+        return result;
+    });
 };
 
 // ============================================
 // ANNOUNCEMENT ACTIONS
 // ============================================
+
 export const createAnnouncement = async (
     currentState: CurrentState,
     data: AnnouncementSchema
-) => {
-    try {
-        await prisma.announcement.create({
-            data: {
-                title: data.title,
-                content: data.content,
-                priority: data.priority,
-                targetRoles: data.targetRoles,
-                expiresAt: data.expiresAt || null,
-            },
-        });
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const announcement = await tx.announcement.create({
+                data: {
+                    title: data.title,
+                    content: data.content,
+                    priority: parseInt(data.priority),
+                    targetRoles: data.targetRoles,
+                    expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+                },
+            });
 
-        revalidatePath("/list/announcements");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "CREATE_ANNOUNCEMENT",
+                performedBy: user.id,
+                targetType: "Announcement",
+                targetId: announcement.id,
+                details: { title: data.title },
+            });
+
+            revalidatePath("/list/announcements");
+
+            return {
+                success: true,
+                error: false,
+                message: `Announcement "${data.title}" created successfully`,
+            };
+        });
+    });
 };
 
 export const updateAnnouncement = async (
     currentState: CurrentState,
     data: AnnouncementSchema
-) => {
-    try {
-        await prisma.announcement.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                title: data.title,
-                content: data.content,
-                priority: data.priority,
-                targetRoles: data.targetRoles,
-                expiresAt: data.expiresAt || null,
-            },
-        });
-
-        revalidatePath("/list/announcements");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Announcement ID is required" };
     }
+
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const announcement = await tx.announcement.update({
+                where: { id: data.id },
+                data: {
+                    title: data.title,
+                    content: data.content,
+                    priority: parseInt(data.priority),
+                    targetRoles: data.targetRoles,
+                    expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_ANNOUNCEMENT",
+                performedBy: user.id,
+                targetType: "Announcement",
+                targetId: announcement.id,
+                details: data,
+            });
+
+            revalidatePath("/list/announcements");
+
+            return {
+                success: true,
+                error: false,
+                message: "Announcement updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteAnnouncement = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        await prisma.announcement.delete({
-            where: {
-                id: id,
-            },
-        });
 
-        revalidatePath("/list/announcements");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for announcements
+        const result = await softDelete(prisma.announcement, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_ANNOUNCEMENT",
+                performedBy: user.id,
+                targetType: "Announcement",
+                targetId: id,
+            });
+
+            revalidatePath("/list/announcements");
+        }
+
+        return result;
+    });
+};
+
+// ============================================
+// TRAINING SESSION ACTIONS
+// ============================================
+
+export const createTrainingSession = async (
+    currentState: CurrentState,
+    data: TrainingSessionSchema
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        // If coach, verify they own the age group
+        if (user.role === Role.COACH) {
+            const hasAccess = await coachOwnsAgeGroup(data.ageGroupId);
+            if (!hasAccess) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "You can only create sessions for your assigned age groups",
+                };
+            }
+        }
+
+        return withTransaction(async (tx) => {
+            const session = await tx.trainingSession.create({
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    date: new Date(data.date),
+                    startTime: new Date(data.startTime),
+                    endTime: new Date(data.endTime),
+                    dayOfWeek: data.dayOfWeek,
+                    venue: data.venue,
+                    type: data.type,
+                    coachId: data.coachId,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
+
+            await logActivity({
+                action: "CREATE_TRAINING_SESSION",
+                performedBy: user.id,
+                targetType: "TrainingSession",
+                targetId: session.id,
+                details: { title: data.title },
+            });
+
+            revalidatePath("/list/lessons");
+
+            return {
+                success: true,
+                error: false,
+                message: `Training session "${data.title}" created successfully`,
+            };
+        });
+    });
+};
+
+export const updateTrainingSession = async (
+    currentState: CurrentState,
+    data: TrainingSessionSchema
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Session ID is required" };
     }
+
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        return withTransaction(async (tx) => {
+            const session = await tx.trainingSession.update({
+                where: { id: data.id },
+                data: {
+                    title: data.title,
+                    description: data.description,
+                    date: new Date(data.date),
+                    startTime: new Date(data.startTime),
+                    endTime: new Date(data.endTime),
+                    dayOfWeek: data.dayOfWeek,
+                    venue: data.venue,
+                    type: data.type,
+                    coachId: data.coachId,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_TRAINING_SESSION",
+                performedBy: user.id,
+                targetType: "TrainingSession",
+                targetId: session.id,
+                details: data,
+            });
+
+            revalidatePath("/list/lessons");
+
+            return {
+                success: true,
+                error: false,
+                message: "Training session updated successfully",
+            };
+        });
+    });
+};
+
+export const deleteTrainingSession = async (
+    currentState: CurrentState,
+    data: FormData
+): Promise<ActionResult> => {
+    const id = data.get("id") as string;
+
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        // Soft delete for sessions (historical data)
+        const result = await softDelete(prisma.trainingSession, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_TRAINING_SESSION",
+                performedBy: user.id,
+                targetType: "TrainingSession",
+                targetId: id,
+            });
+
+            revalidatePath("/list/lessons");
+        }
+
+        return result;
+    });
+};
+
+// ============================================
+// FIXTURE ACTIONS
+// ============================================
+
+export const createFixture = async (
+    currentState: CurrentState,
+    data: FixtureSchema
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const fixture = await tx.fixture.create({
+                data: {
+                    title: data.title,
+                    opponent: data.opponent,
+                    date: new Date(data.date),
+                    time: new Date(data.time),
+                    venue: data.venue,
+                    isHome: data.isHome === "true",
+                    type: data.type,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
+
+            await logActivity({
+                action: "CREATE_FIXTURE",
+                performedBy: user.id,
+                targetType: "Fixture",
+                targetId: fixture.id,
+                details: { title: data.title },
+            });
+
+            revalidatePath("/list/exams");
+
+            return {
+                success: true,
+                error: false,
+                message: `Fixture "${data.title}" created successfully`,
+            };
+        });
+    });
+};
+
+export const updateFixture = async (
+    currentState: CurrentState,
+    data: FixtureSchema
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Fixture ID is required" };
+    }
+
+    return withRole([Role.ADMIN], async (user) => {
+        return withTransaction(async (tx) => {
+            const fixture = await tx.fixture.update({
+                where: { id: data.id },
+                data: {
+                    title: data.title,
+                    opponent: data.opponent,
+                    date: new Date(data.date),
+                    time: new Date(data.time),
+                    venue: data.venue,
+                    isHome: data.isHome === "true",
+                    type: data.type,
+                    ageGroupId: data.ageGroupId,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_FIXTURE",
+                performedBy: user.id,
+                targetType: "Fixture",
+                targetId: fixture.id,
+                details: data,
+            });
+
+            revalidatePath("/list/exams");
+
+            return {
+                success: true,
+                error: false,
+                message: "Fixture updated successfully",
+            };
+        });
+    });
+};
+
+export const deleteFixture = async (
+    currentState: CurrentState,
+    data: FormData
+): Promise<ActionResult> => {
+    const id = data.get("id") as string;
+
+    return withRole([Role.ADMIN], async (user) => {
+        // Soft delete for fixtures
+        const result = await softDelete(prisma.fixture, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_FIXTURE",
+                performedBy: user.id,
+                targetType: "Fixture",
+                targetId: id,
+            });
+
+            revalidatePath("/list/exams");
+        }
+
+        return result;
+    });
 };
 
 // ============================================
 // RESULT ACTIONS
 // ============================================
+
 export const createResult = async (
     currentState: CurrentState,
     data: ResultSchema
-) => {
-    try {
-        await prisma.result.create({
-            data: {
-                studentId: data.studentId,
-                fixtureId: data.fixtureId,
-                goals: data.goals,
-                assists: data.assists,
-                rating: data.rating,
-                minutesPlayed: data.minutesPlayed,
-                yellowCards: data.yellowCards,
-                redCards: data.redCards,
-                notes: data.notes || null,
-            },
-        });
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        return withTransaction(async (tx) => {
+            const result = await tx.result.create({
+                data: {
+                    studentId: data.studentId,
+                    fixtureId: data.fixtureId,
+                    goals: parseInt(data.goals),
+                    assists: parseInt(data.assists),
+                    rating: parseFloat(data.rating),
+                    minutesPlayed: parseInt(data.minutesPlayed),
+                    yellowCards: parseInt(data.yellowCards || "0"),
+                    redCards: parseInt(data.redCards || "0"),
+                    notes: data.notes,
+                },
+            });
 
-        revalidatePath("/list/results");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "CREATE_RESULT",
+                performedBy: user.id,
+                targetType: "Result",
+                targetId: result.id,
+                details: { studentId: data.studentId },
+            });
+
+            revalidatePath("/list/results");
+
+            return {
+                success: true,
+                error: false,
+                message: "Result recorded successfully",
+            };
+        });
+    });
 };
 
 export const updateResult = async (
     currentState: CurrentState,
     data: ResultSchema
-) => {
-    try {
-        await prisma.result.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                studentId: data.studentId,
-                fixtureId: data.fixtureId,
-                goals: data.goals,
-                assists: data.assists,
-                rating: data.rating,
-                minutesPlayed: data.minutesPlayed,
-                yellowCards: data.yellowCards,
-                redCards: data.redCards,
-                notes: data.notes || null,
-            },
-        });
-
-        revalidatePath("/list/results");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Result ID is required" };
     }
+
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        return withTransaction(async (tx) => {
+            const result = await tx.result.update({
+                where: { id: data.id },
+                data: {
+                    goals: parseInt(data.goals),
+                    assists: parseInt(data.assists),
+                    rating: parseFloat(data.rating),
+                    minutesPlayed: parseInt(data.minutesPlayed),
+                    yellowCards: parseInt(data.yellowCards || "0"),
+                    redCards: parseInt(data.redCards || "0"),
+                    notes: data.notes,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_RESULT",
+                performedBy: user.id,
+                targetType: "Result",
+                targetId: result.id,
+                details: data,
+            });
+
+            revalidatePath("/list/results");
+
+            return {
+                success: true,
+                error: false,
+                message: "Result updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteResult = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        await prisma.result.delete({
-            where: {
-                id: id,
-            },
-        });
 
-        revalidatePath("/list/results");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        // Hard delete for results (not financial data)
+        const result = await hardDelete(prisma.result, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_RESULT",
+                performedBy: user.id,
+                targetType: "Result",
+                targetId: id,
+            });
+
+            revalidatePath("/list/results");
+        }
+
+        return result;
+    });
 };
 
 // ============================================
 // ATTENDANCE ACTIONS
 // ============================================
+
 export const createAttendance = async (
     currentState: CurrentState,
     data: AttendanceSchema
-) => {
-    try {
-        await prisma.attendance.create({
-            data: {
-                studentId: data.studentId,
-                trainingSessionId: data.trainingSessionId,
-                status: data.status,
-                notes: data.notes || null,
-                markedBy: "admin", // TODO: Get from current user
-            },
-        });
+): Promise<ActionResult> => {
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        return withTransaction(async (tx) => {
+            const attendance = await tx.attendance.create({
+                data: {
+                    studentId: data.studentId,
+                    trainingSessionId: data.trainingSessionId,
+                    status: data.status,
+                    notes: data.notes,
+                    markedBy: user.id,
+                },
+            });
 
-        revalidatePath("/list/attendances");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+            await logActivity({
+                action: "MARK_ATTENDANCE",
+                performedBy: user.id,
+                targetType: "Attendance",
+                targetId: attendance.id,
+                details: { studentId: data.studentId, status: data.status },
+            });
+
+            revalidatePath("/list/attendance");
+
+            return {
+                success: true,
+                error: false,
+                message: "Attendance marked successfully",
+            };
+        });
+    });
 };
 
 export const updateAttendance = async (
     currentState: CurrentState,
     data: AttendanceSchema
-) => {
-    try {
-        await prisma.attendance.update({
-            where: {
-                id: data.id,
-            },
-            data: {
-                studentId: data.studentId,
-                trainingSessionId: data.trainingSessionId,
-                status: data.status,
-                notes: data.notes || null,
-            },
-        });
-
-        revalidatePath("/list/attendances");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+): Promise<ActionResult> => {
+    if (!data.id) {
+        return { success: false, error: true, message: "Attendance ID is required" };
     }
+
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        return withTransaction(async (tx) => {
+            const attendance = await tx.attendance.update({
+                where: { id: data.id },
+                data: {
+                    status: data.status,
+                    notes: data.notes,
+                },
+            });
+
+            await logActivity({
+                action: "UPDATE_ATTENDANCE",
+                performedBy: user.id,
+                targetType: "Attendance",
+                targetId: attendance.id,
+                details: data,
+            });
+
+            revalidatePath("/list/attendance");
+
+            return {
+                success: true,
+                error: false,
+                message: "Attendance updated successfully",
+            };
+        });
+    });
 };
 
 export const deleteAttendance = async (
     currentState: CurrentState,
     data: FormData
-) => {
+): Promise<ActionResult> => {
     const id = data.get("id") as string;
-    try {
-        await prisma.attendance.delete({
-            where: {
-                id: id,
-            },
-        });
 
-        revalidatePath("/list/attendances");
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
-    }
+    return withRole([Role.ADMIN, Role.COACH], async (user) => {
+        // Hard delete for attendance (not financial data)
+        const result = await hardDelete(prisma.attendance, id);
+
+        if (result.success) {
+            await logActivity({
+                action: "DELETE_ATTENDANCE",
+                performedBy: user.id,
+                targetType: "Attendance",
+                targetId: id,
+            });
+
+            revalidatePath("/list/attendance");
+        }
+
+        return result;
+    });
 };

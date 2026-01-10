@@ -26,12 +26,15 @@ export type OrderSchema = z.infer<typeof orderSchema>;
 
 export const createOrder = async (data: OrderSchema) => {
     try {
+        console.log("[CREATE_ORDER] Starting:", data);
+
         const { userId } = await auth();
         if (!userId) {
+            console.error("[CREATE_ORDER] No userId");
             return { success: false, error: true, message: "Not authenticated" };
         }
 
-        await prisma.order.create({
+        const order = await prisma.order.create({
             data: {
                 userId,
                 customerName: data.customerName,
@@ -48,10 +51,21 @@ export const createOrder = async (data: OrderSchema) => {
             },
         });
 
-        return { success: true, error: false };
-    } catch (err) {
-        console.log(err);
-        return { success: false, error: true };
+        console.log("[CREATE_ORDER] Success:", order.id);
+        revalidatePath("/admin/orders");
+
+        return {
+            success: true,
+            error: false,
+            message: `Order #${order.id.slice(0, 8)} placed successfully!`
+        };
+    } catch (err: any) {
+        console.error("[CREATE_ORDER] Error:", err);
+        return {
+            success: false,
+            error: true,
+            message: err.message || "Failed to place order"
+        };
     }
 };
 
@@ -62,7 +76,7 @@ export const getAllOrders = async () => {
         });
         return orders;
     } catch (err) {
-        console.log(err);
+        console.error("[GET_ORDERS] Error:", err);
         return [];
     }
 };
@@ -74,7 +88,7 @@ export const getOrderById = async (id: string) => {
         });
         return order;
     } catch (err) {
-        console.log(err);
+        console.error("[GET_ORDER] Error:", err);
         return null;
     }
 };
@@ -88,7 +102,20 @@ export const updateOrderStatus = async (id: string, status: "PENDING" | "PROCESS
         revalidatePath("/admin/orders");
         return { success: true, error: false };
     } catch (err) {
-        console.log(err);
+        console.error("[UPDATE_ORDER_STATUS] Error:", err);
         return { success: false, error: true };
+    }
+};
+
+export const deleteOrder = async (id: string) => {
+    try {
+        await prisma.order.delete({
+            where: { id },
+        });
+        revalidatePath("/admin/orders");
+        return { success: true, error: false, message: "Order deleted successfully" };
+    } catch (err: any) {
+        console.error("[DELETE_ORDER] Error:", err);
+        return { success: false, error: true, message: err.message || "Failed to delete order" };
     }
 };

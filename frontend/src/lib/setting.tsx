@@ -6,6 +6,7 @@ type RouteAccessMap = {
 
 export const routeAccessMap: RouteAccessMap = {
   "/admin(.*)": ["admin", "teacher", "student", "parent"],
+  "/shop": ["admin", "teacher", "student", "parent"],
   "/list/teachers": ["admin", "teacher", "student", "parent"], // Students and parents can see coaches
   "/list/students": ["admin", "teacher", "student", "parent"], // Students can see other students, parents can see their children
   "/list/parents": ["admin", "teacher"],
