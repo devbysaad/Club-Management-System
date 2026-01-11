@@ -1,15 +1,22 @@
 "use client";
 
-import { updateAdmissionStatus, approveAdmission, rejectAdmission } from "@/lib/admission-actions";
-import { useState } from "react";
+import { updateAdmissionStatus, approveAdmission, rejectAdmission, getAgeGroups } from "@/lib/admission-actions";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
-type AdmissionStatus = "PENDING" | "REVIEWING" | "ACCEPTED" | "REJECTED" | "CONVERTED";
+type AdmissionStatus = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CONVERTED";
 
 interface AdmissionStatusSelectorProps {
     admissionId: string;
     currentStatus: AdmissionStatus;
+}
+
+interface AgeGroup {
+    id: string;
+    name: string;
+    minAge: number;
+    maxAge: number;
 }
 
 const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatusSelectorProps) => {
@@ -17,13 +24,29 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
     const [loading, setLoading] = useState(false);
     const [showAgeGroupModal, setShowAgeGroupModal] = useState(false);
     const [selectedAgeGroup, setSelectedAgeGroup] = useState("");
+    const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
+    const [loadingAgeGroups, setLoadingAgeGroups] = useState(false);
     const router = useRouter();
+
+    // Fetch real age groups from database
+    useEffect(() => {
+        const fetchAgeGroups = async () => {
+            setLoadingAgeGroups(true);
+            console.log("[AdmissionStatusSelector] Fetching age groups...");
+            const groups = await getAgeGroups();
+            console.log("[AdmissionStatusSelector] Loaded", groups.length, "age groups");
+            setAgeGroups(groups as AgeGroup[]);
+            setLoadingAgeGroups(false);
+        };
+
+        fetchAgeGroups();
+    }, []);
 
     const handleStatusChange = async (newStatus: AdmissionStatus) => {
         if (newStatus === status) return;
 
-        // If trying to accept, show age group modal
-        if (newStatus === "ACCEPTED") {
+        // If trying to approve, show age group modal
+        if (newStatus === "APPROVED") {
             setShowAgeGroupModal(true);
             return;
         }
@@ -48,8 +71,9 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
             return;
         }
 
-        // For other status changes (PENDING, REVIEWING)
+        // For other status changes (PENDING, UNDER_REVIEW)
         setLoading(true);
+        console.log("[AdmissionStatusSelector] Updating status to:", newStatus);
         const result = await updateAdmissionStatus(admissionId, newStatus);
 
         if (result.success) {
@@ -57,7 +81,7 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
             toast.success("Status updated successfully!");
             router.refresh();
         } else {
-            toast.error("Failed to update status");
+            toast.error(result.message || "Failed to update status");
         }
         setLoading(false);
     };
@@ -69,6 +93,7 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
         }
 
         setLoading(true);
+        console.log("[AdmissionStatusSelector] Approving with age group ID:", selectedAgeGroup);
         const result = await approveAdmission(admissionId, selectedAgeGroup);
 
         if (result.success) {
@@ -84,8 +109,8 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
 
     const statuses: { value: AdmissionStatus; label: string; color: string }[] = [
         { value: "PENDING", label: "Pending", color: "bg-yellow-500/20 text-yellow-600 hover:bg-yellow-500/30" },
-        { value: "REVIEWING", label: "Under Review", color: "bg-blue-500/20 text-blue-600 hover:bg-blue-500/30" },
-        { value: "ACCEPTED", label: "✅ Approve & Create Student", color: "bg-green-500/20 text-green-600 hover:bg-green-500/30" },
+        { value: "UNDER_REVIEW", label: "Under Review", color: "bg-blue-500/20 text-blue-600 hover:bg-blue-500/30" },
+        { value: "APPROVED", label: "✅ Approve & Create Student", color: "bg-green-500/20 text-green-600 hover:bg-green-500/30" },
         { value: "REJECTED", label: "❌ Reject", color: "bg-red-500/20 text-red-600 hover:bg-red-500/30" },
     ];
 
@@ -128,19 +153,28 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
                             Choose which age group this student will be assigned to:
                         </p>
 
-                        <select
-                            value={selectedAgeGroup}
-                            onChange={(e) => setSelectedAgeGroup(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] mb-4"
-                        >
-                            <option value="">-- Select Age Group --</option>
-                            <option value="U10">U-10 (Under 10)</option>
-                            <option value="U12">U-12 (Under 12)</option>
-                            <option value="U14">U-14 (Under 14)</option>
-                            <option value="U16">U-16 (Under 16)</option>
-                            <option value="U18">U-18 (Under 18)</option>
-                            <option value="Senior">Senior</option>
-                        </select>
+                        {loadingAgeGroups ? (
+                            <div className="text-center py-8 text-[var(--text-muted)]">
+                                Loading age groups...
+                            </div>
+                        ) : ageGroups.length === 0 ? (
+                            <div className="text-center py-8 text-red-500">
+                                No age groups found. Please create age groups first.
+                            </div>
+                        ) : (
+                            <select
+                                value={selectedAgeGroup}
+                                onChange={(e) => setSelectedAgeGroup(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] mb-4"
+                            >
+                                <option value="">-- Select Age Group --</option>
+                                {ageGroups.map((group) => (
+                                    <option key={group.id} value={group.id}>
+                                        {group.name} (Ages {group.minAge}-{group.maxAge})
+                                    </option>
+                                ))}
+                            </select>
+                        )}
 
                         <div className="flex gap-2">
                             <button
@@ -152,7 +186,7 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
                             </button>
                             <button
                                 onClick={handleApprove}
-                                disabled={loading || !selectedAgeGroup}
+                                disabled={loading || !selectedAgeGroup || ageGroups.length === 0}
                                 className="flex-1 px-4 py-3 rounded-xl bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 font-semibold"
                             >
                                 {loading ? "Approving..." : "Approve & Create"}

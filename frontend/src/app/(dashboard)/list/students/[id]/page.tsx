@@ -3,7 +3,10 @@
 import Announcements from "@/components/Announcements";
 import BigCalendarContainer from "@/components/BigCalendarContainer";
 import Performance from "@/components/Performance";
+import FeePaymentCalendar from "@/components/FeePaymentCalendar";
 import prisma from "@/lib/prisma";
+import { getStudentFees } from "@/lib/fee-actions";
+import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -37,6 +40,12 @@ const SingleStudentPage = async ({
           markedAt: "desc",
         },
       },
+      dailyAttendance: {
+        take: 30,
+        orderBy: {
+          date: "desc",
+        },
+      },
     },
   });
 
@@ -65,6 +74,14 @@ const SingleStudentPage = async ({
     totalAttendances > 0
       ? Math.round((presentCount / totalAttendances) * 100)
       : 0;
+
+  // Get current user and check if admin
+  const user = await currentUser();
+  const isAdmin = user?.publicMetadata?.role === 'ADMIN';
+
+  // Fetch fee data for current year (admin only)
+  const currentYear = new Date().getFullYear();
+  const fees = isAdmin ? await getStudentFees(studentId, currentYear) : [];
 
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
@@ -277,6 +294,61 @@ const SingleStudentPage = async ({
 
         {/* PERFORMANCE */}
         <Performance />
+
+        {/* DAILY ATTENDANCE */}
+        <div className="glass-card rounded-2xl p-6">
+          <h1 className="text-xl font-heading font-semibold text-white mb-4">
+            Daily Attendance
+          </h1>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {student.dailyAttendance.length > 0 ? (
+              student.dailyAttendance.map((record) => (
+                <div
+                  key={record.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-fcSurface border border-fcBorder hover:border-fcGold/30 transition-colors"
+                >
+                  <div>
+                    <p className="text-white font-medium text-sm">
+                      {new Date(record.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                    <p className="text-fcTextMuted text-xs mt-0.5">
+                      {new Date(record.date).toLocaleDateString("en-US", {
+                        weekday: "long",
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${record.status === "PRESENT"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-red-500/20 text-red-400"
+                      }`}
+                  >
+                    {record.status === "PRESENT" ? "✓ Present" : "✗ Absent"}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-fcTextMuted text-sm text-center py-8">
+                No attendance records yet
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* FEE PAYMENT CALENDAR - Admin Only */}
+        {isAdmin && (
+          <FeePaymentCalendar
+            studentId={studentId}
+            studentName={`${student.firstName} ${student.lastName}`}
+            year={currentYear}
+            fees={fees}
+            isAdmin={isAdmin}
+          />
+        )}
 
         {/* ANNOUNCEMENTS */}
         <Announcements />

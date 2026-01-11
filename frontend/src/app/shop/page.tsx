@@ -55,6 +55,17 @@ const ShopPage = () => {
             <div className="max-w-4xl mx-auto">
                 <div className="glass-card rounded-2xl p-6 md:p-8">
                     <div className="mb-8">
+                        {/* Back Button */}
+                        <button
+                            onClick={() => router.back()}
+                            className="mb-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-light)] active:scale-95 transition-all touch-manipulation"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span className="text-sm font-medium">Back</span>
+                        </button>
+
                         <h1 className="text-3xl font-heading font-bold text-[var(--text-primary)] mb-2">
                             🛍️ Custom Jersey Shop
                         </h1>

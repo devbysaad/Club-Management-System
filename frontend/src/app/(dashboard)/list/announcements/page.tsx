@@ -144,14 +144,14 @@ const AnnouncementListPage = async ({
 
   const [data, count] = await prisma.$transaction([
     prisma.announcement.findMany({
-      where: query,
+      where: { ...query, isDeleted: false },
       orderBy: {
         publishedAt: "desc",
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.announcement.count({ where: query }),
+    prisma.announcement.count({ where: { ...query, isDeleted: false } }),
   ]);
 
   return (

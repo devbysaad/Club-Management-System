@@ -2,6 +2,7 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import AttendanceButtons from "@/components/AttendanceButtons";
 import { ITEM_PER_PAGE } from "@/lib/setting";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
@@ -11,6 +12,7 @@ import { Prisma, Student } from "@prisma/client";
 
 type Player = Student & {
   ageGroup: { name: string } | null;
+  todayAttendance?: { status: "PRESENT" | "ABSENT" } | null;
 };
 
 const columns = [
@@ -39,6 +41,7 @@ const renderRow = (
 ) => {
   const position = item.position || "N/A";
   const squad = item.ageGroup?.name || "Academy";
+  const markedStatus = item.todayAttendance?.status || null;
 
   return (
     <tr
@@ -98,6 +101,8 @@ const renderRow = (
 
       <td>
         <div className="flex items-center gap-2">
+          {role === "admin" && <AttendanceButtons studentId={item.id} markedStatus={markedStatus} />}
+
           <Link href={`/list/students/${item.id}`}>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-fcBlue/20 hover:bg-fcBlue/30 transition-colors">
               <svg
@@ -280,18 +285,34 @@ const PlayerListPage = async ({
     where.ageGroupId = ageGroupId;
   }
 
+  // Get today's date at midnight for attendance check
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const [students, totalCount, parents, ageGroups] = await prisma.$transaction([
     prisma.student.findMany({
-      where,
-      include: { ageGroup: true },
+      where: { ...where, isDeleted: false },
+      include: {
+        ageGroup: true,
+        dailyAttendance: {
+          where: { date: today },
+          take: 1,
+        },
+      },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
       orderBy: { createdAt: "desc" },
     }),
-    prisma.student.count({ where }),
+    prisma.student.count({ where: { ...where, isDeleted: false } }),
     prisma.parent.findMany({ select: { id: true, firstName: true, lastName: true } }),
     prisma.ageGroup.findMany({ select: { id: true, name: true } }),
   ]);
+
+  // Transform students to include today's attendance status
+  const studentsWithAttendance = students.map(student => ({
+    ...student,
+    todayAttendance: student.dailyAttendance[0] || null,
+  }));
 
   const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);
 
@@ -326,11 +347,11 @@ const PlayerListPage = async ({
       {/* LIST */}
       <Table
         columns={columns}
-        data={students}
+        data={studentsWithAttendance}
         renderRow={(item) =>
           renderRow(
             item as Player,
-            students.indexOf(item),
+            studentsWithAttendance.indexOf(item),
             role,
             { parents, ageGroups }
           )

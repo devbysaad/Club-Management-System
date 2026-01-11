@@ -496,10 +496,25 @@ export const deleteParent = async (
     const id = data.get("id") as string;
 
     return withRole([Role.ADMIN], async (user) => {
-        // Soft delete for parents (financial data)
-        const result = await softDelete(prisma.parent, id);
+        try {
+            // Soft delete parent
+            await prisma.parent.update({
+                where: { id },
+                data: {
+                    isDeleted: true,
+                    deletedAt: new Date(),
+                },
+            });
 
-        if (result.success) {
+            // CASCADE: Also soft delete all children (students)
+            await prisma.student.updateMany({
+                where: { parentId: id },
+                data: {
+                    isDeleted: true,
+                    deletedAt: new Date(),
+                },
+            });
+
             await logActivity({
                 action: "DELETE_PARENT",
                 performedBy: user.id,
@@ -508,9 +523,20 @@ export const deleteParent = async (
             });
 
             revalidatePath("/list/parents");
-        }
+            revalidatePath("/list/students"); // Also refresh students list
 
-        return result;
+            return {
+                success: true,
+                error: false,
+                message: "Parent and associated students deleted successfully",
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to delete parent",
+            };
+        }
     });
 };
 

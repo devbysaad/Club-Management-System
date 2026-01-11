@@ -148,14 +148,14 @@ const EventListPage = async ({
 
   const [data, count] = await prisma.$transaction([
     prisma.event.findMany({
-      where: query,
+      where: { ...query, isDeleted: false },
       orderBy: {
         date: "desc",
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.event.count({ where: query }),
+    prisma.event.count({ where: { ...query, isDeleted: false } }),
   ]);
 
   return (

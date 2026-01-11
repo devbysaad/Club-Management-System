@@ -94,32 +94,46 @@ const AboutPage = () => {
                     {/* Header Section */}
                     <div className="mb-12">
                         <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-rmBlue to-blue-400 flex items-center justify-center mb-8 shadow-xl overflow-hidden border-4 border-[var(--bg-secondary)]">
-                            <Image src="/devbysaad.jpg" alt="Muhammad Saad" width={128} height={128} className="w-full h-full object-cover" />
+                            <Image
+                                src="/devbysaad.jpg"
+                                alt="Muhammad Saad"
+                                width={128}
+                                height={128}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
+
                         <h1 className="text-5xl md:text-6xl font-bold text-[var(--text-primary)] mb-6 tracking-tight">
                             Muhammad Saad
                         </h1>
-                        <p className="text-2xl text-[var(--text-secondary)] font-medium leading-relaxed">
-                            Software Engineer & Founder of Pato Hornets Academy.
-                        </p>
                     </div>
 
                     {/* Bio Section */}
                     <div className="space-y-8 text-lg text-[var(--text-secondary)] leading-relaxed">
                         <p>
-                            I am a passionate software engineer dedicated to building modern web applications and empowering the next generation of football talent through technology.
+                            I am a web developer and I work as a freelancer. I build websites and web
+                            apps using modern tools like Next.js.
                         </p>
+
                         <p>
-                            At <span className="text-rmBlue font-semibold">Pato Hornets Football Academy</span>, we bridge the gap between sports excellence and digital management, providing a seamless experience for coaches, players, and parents.
+                            Currently, I am working with{" "}
+                            <span className="text-rmBlue font-semibold">
+                                Pato Hornets Football Academy
+                            </span>{" "}
+                            as a freelance developer.
                         </p>
+
                         <p>
-                            My work focuses on creating clean, efficient, and user-centric solutions. This platform is a testament to that vision—a professional, Real Madrid-inspired management system built with Next.js, Prisma, and Clerk.
+                            This website is a project I built for them to manage players, admissions,
+                            and other academy work.
                         </p>
                     </div>
 
                     {/* Social Links */}
                     <div className="mt-16 pt-12 border-t border-[var(--border-color)]">
-                        <h2 className="text-sm font-bold text-rmBlue uppercase tracking-widest mb-8">Connect with me</h2>
+                        <h2 className="text-sm font-bold text-rmBlue uppercase tracking-widest mb-8">
+                            Connect with me
+                        </h2>
                         <div className="flex flex-wrap gap-4">
                             {socialLinks.map((link) => (
                                 <a
@@ -140,10 +154,11 @@ const AboutPage = () => {
 
                     {/* Footer Info */}
                     <div className="mt-24 text-sm text-[var(--text-muted)] border-t border-[var(--border-color)] pt-8 text-center">
-                        <p>© 2026 Muhammad Saad. Built with excellence in Pakistan.</p>
+                        <p>© 2026 Muhammad Saad. Built in Pakistan.</p>
                     </div>
                 </div>
             </main>
+
         </div>
     );
 };

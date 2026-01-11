@@ -76,7 +76,32 @@ export const getAdmissionById = async (id: string) => {
     }
 };
 
-export const updateAdmissionStatus = async (id: string, status: "PENDING" | "REVIEWING" | "ACCEPTED" | "REJECTED") => {
+// ============================================
+// GET AGE GROUPS FOR ADMISSION APPROVAL
+// ============================================
+export const getAgeGroups = async () => {
+    try {
+        console.log("[GET_AGE_GROUPS] Fetching age groups from database");
+        const ageGroups = await prisma.ageGroup.findMany({
+            where: { isDeleted: false },
+            select: {
+                id: true,
+                name: true,
+                minAge: true,
+                maxAge: true,
+                capacity: true,
+            },
+            orderBy: { name: 'asc' },
+        });
+        console.log("[GET_AGE_GROUPS] Found", ageGroups.length, "age groups");
+        return ageGroups;
+    } catch (err) {
+        console.error("[GET_AGE_GROUPS] Error:", err);
+        return [];
+    }
+};
+
+export const updateAdmissionStatus = async (id: string, status: "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED") => {
     try {
         console.log("[UPDATE_STATUS] Updating admission:", id, "to", status);
 
@@ -116,11 +141,26 @@ export const deleteAdmission = async (id: string) => {
 // ============================================
 // APPROVE ADMISSION WORKFLOW
 // ============================================
-export const approveAdmission = async (admissionId: string, ageGroupName: string) => {
+export const approveAdmission = async (admissionId: string, ageGroupId: string) => {
     try {
-        console.log("[APPROVE_ADMISSION] Starting for:", admissionId, "Age Group:", ageGroupName);
+        console.log("[APPROVE_ADMISSION] Starting for:", admissionId, "Age Group ID:", ageGroupId);
 
-        // 1. Get admission details
+        // 1. Validate age group exists
+        if (!ageGroupId) {
+            return { success: false, error: true, message: "Age group is required" };
+        }
+
+        const ageGroup = await prisma.ageGroup.findUnique({
+            where: { id: ageGroupId },
+        });
+
+        if (!ageGroup) {
+            return { success: false, error: true, message: "Invalid age group selected" };
+        }
+
+        console.log("[APPROVE_ADMISSION] Age group validated:", ageGroup.name);
+
+        // 2. Get admission details
         const admission = await prisma.admission.findUnique({
             where: { id: admissionId },
         });
@@ -133,29 +173,10 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
             return { success: false, error: true, message: "Admission already approved" };
         }
 
-        // 2. Find or create age group
-        let ageGroup = await prisma.ageGroup.findFirst({
-            where: { name: ageGroupName },
-        });
-
-        if (!ageGroup) {
-            // Create age group if it doesn't exist  
-            ageGroup = await prisma.ageGroup.create({
-                data: {
-                    name: ageGroupName,
-                    description: `${ageGroupName} age group`,
-                    minAge: 0,
-                    maxAge: 100,
-                    capacity: 50,
-                },
-            });
-        }
-
-        console.log("[APPROVE_ADMISSION] Age group found/created:", ageGroup.id);
-
         // 3. Create Clerk user for parent
         console.log("[APPROVE_ADMISSION] Creating parent Clerk user");
-        const parentClerkUser = await clerkClient.users.createUser({
+        const client = await clerkClient();
+        const parentClerkUser = await client.users.createUser({
             emailAddress: [admission.email],
             firstName: admission.parentName.split(" ")[0],
             lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
@@ -181,7 +202,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
 
         // 5. Create Clerk user for student
         console.log("[APPROVE_ADMISSION] Creating student Clerk user");
-        const studentClerkUser = await clerkClient.users.createUser({
+        const studentClerkUser = await client.users.createUser({
             emailAddress: [`${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`],
             firstName: admission.firstName,
             lastName: admission.lastName,
@@ -191,7 +212,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
 
         console.log("[APPROVE_ADMISSION] Student Clerk user created:", studentClerkUser.id);
 
-        // 6. Create Student profile
+        // 6. Create Student profile with provided age group ID
         const student = await prisma.student.create({
             data: {
                 userId: studentClerkUser.id,
@@ -204,7 +225,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
                 position: admission.position,
                 sex: admission.sex,
                 parentId: parent.id,
-                ageGroupId: ageGroup.id,
+                ageGroupId: ageGroupId, // Use the provided age group ID
             },
         });
 
@@ -212,7 +233,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
 
         // 7. Send Clerk invitations
         console.log("[APPROVE_ADMISSION] Sending invitations");
-        await clerkClient.invitations.createInvitation({
+        await client.invitations.createInvitation({
             emailAddress: admission.email,
             publicMetadata: { role: "parent", userId: parentClerkUser.id },
             redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/sign-in`,
@@ -223,6 +244,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
             where: { id: admissionId },
             data: {
                 status: "CONVERTED",
+                convertedToStudentId: student.id,
             },
         });
 
@@ -235,7 +257,7 @@ export const approveAdmission = async (admissionId: string, ageGroupName: string
         return {
             success: true,
             error: false,
-            message: `Admission approved! Student ${admission.firstName} ${admission.lastName} created successfully.`,
+            message: `Admission approved! Student ${admission.firstName} ${admission.lastName} created and assigned to ${ageGroup.name}.`,
         };
     } catch (err: any) {
         console.error("[APPROVE_ADMISSION] Error:", err);

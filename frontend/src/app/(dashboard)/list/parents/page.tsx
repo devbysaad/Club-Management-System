@@ -175,9 +175,10 @@ const ParentListPage = async ({
   // Fetch real parents from database with pagination
   const [parents, totalCount] = await prisma.$transaction([
     prisma.parent.findMany({
-      where: query,
+      where: { ...query, isDeleted: false },
       include: {
         students: {
+          where: { isDeleted: false }, // Also filter deleted students
           select: {
             id: true,
             firstName: true,
@@ -191,7 +192,7 @@ const ParentListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (currentPage - 1),
     }),
-    prisma.parent.count({ where: query }),
+    prisma.parent.count({ where: { ...query, isDeleted: false } }),
   ]);
 
   const totalPages = Math.ceil(totalCount / ITEM_PER_PAGE);

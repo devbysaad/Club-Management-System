@@ -32,10 +32,10 @@ model AppUser {
 
   // Audit trail
   activityLogs ActivityLog[]
-  
+
   // Shop orders
   jerseyOrders JerseyOrder[]
-  
+
   @@index([role])
   @@index([status])
   @@index([email])
@@ -112,9 +112,10 @@ model Coach {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user      AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ageGroups CoachAgeGroup[]
-  sessions  TrainingSession[]
+  user            AppUser                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ageGroups       CoachAgeGroup[]
+  sessions        TrainingSession[]
+  dailyAttendance CoachDailyAttendance[]
 
   @@index([userId])
   @@index([isDeleted])
@@ -133,9 +134,10 @@ model Parent {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user     AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  students Student[]
-  payments Payment[]
+  user        AppUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students    Student[]
+  monthlyFees MonthlyFee[]
+  Payment     Payment[]
 
   @@index([userId])
   @@index([isDeleted])
@@ -163,13 +165,15 @@ model Student {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  user        AppUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent      Parent       @relation(fields: [parentId], references: [id], onDelete: Restrict) // SOFT DELETE
-  ageGroup    AgeGroup     @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
-  attendances Attendance[]
-  results     Result[]
-  enrollments Enrollment[]
-  orders      Order[]
+  user            AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent          Parent            @relation(fields: [parentId], references: [id], onDelete: Restrict) // SOFT DELETE
+  ageGroup        AgeGroup          @relation(fields: [ageGroupId], references: [id], onDelete: Restrict)
+  attendances     Attendance[]
+  dailyAttendance DailyAttendance[]
+  results         Result[]
+  enrollments     Enrollment[]
+  orders          Order[]
+  monthlyFees     MonthlyFee[]
 
   @@index([userId])
   @@index([parentId])
@@ -299,6 +303,49 @@ enum AttendanceStatus {
   ABSENT
   LATE
   EXCUSED
+}
+
+// ============================================
+// DAILY ATTENDANCE (Simple Student Attendance)
+// ============================================
+model DailyAttendance {
+  id        String                @id @default(uuid())
+  studentId String
+  date      DateTime // Date only (time set to midnight)
+  status    DailyAttendanceStatus
+  markedBy  String // Admin who marked it
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([studentId])
+  @@index([date])
+}
+
+enum DailyAttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+// ============================================
+// DAILY COACH ATTENDANCE
+// ============================================
+model CoachDailyAttendance {
+  id        String                @id @default(uuid())
+  coachId   String
+  date      DateTime // Date only (time set to midnight)
+  status    DailyAttendanceStatus
+  markedBy  String // Admin who marked it
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, date])
+  @@index([coachId])
+  @@index([date])
 }
 
 // ============================================
@@ -658,7 +705,6 @@ model JerseyOrder {
   @@index([createdAt])
 }
 
-
 // ============================================
 // AUDIT & ACTIVITY LOGS
 // ============================================
@@ -696,4 +742,42 @@ model ClerkSyncLog {
   @@index([clerkUserId])
   @@index([eventType])
   @@index([processedAt])
+}
+
+// ============================================
+// MONTHLY FEES (Student Tuition)
+// ============================================
+enum FeeStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+model MonthlyFee {
+  id         String    @id @default(uuid())
+  studentId  String
+  parentId   String
+  amount     Float
+  month      Int // 1-12
+  year       Int // 2024, 2025, etc.
+  status     FeeStatus @default(UNPAID)
+  dueDate    DateTime
+  paidAt     DateTime?
+  paidAmount Float?
+  notes      String?
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, month, year])
+  @@index([parentId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([month, year])
+  @@index([isDeleted])
 }
