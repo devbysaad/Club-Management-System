@@ -26,6 +26,7 @@ model AppUser {
 
   // One user can have ONE role-specific profile
   admin   Admin?
+  staff   Staff?
   coach   Coach?
   student Student?
   parent  Parent?
@@ -43,6 +44,7 @@ model AppUser {
 
 enum Role {
   ADMIN
+  STAFF
   COACH
   STUDENT
   PARENT
@@ -77,6 +79,24 @@ enum DayOfWeek {
 // ROLE-SPECIFIC PROFILES
 // ============================================
 model Admin {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  photo     String? // URL to Clerk-managed photo
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Staff {
   id        String    @id @default(uuid())
   userId    String    @unique
   firstName String

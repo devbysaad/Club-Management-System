@@ -110,13 +110,13 @@ const LoginPage = () => {
                             <div className="space-y-5">
                                 <Clerk.Field name="identifier" className="space-y-2">
                                     <Clerk.Label className="block text-sm font-semibold text-[var(--text-secondary)]">
-                                        Email or Username
+                                        Username
                                     </Clerk.Label>
                                     <Clerk.Input
                                         type="text"
                                         required
                                         className="w-full px-4 py-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-dim)] focus:border-rmBlue focus:ring-2 focus:ring-rmBlue/10 outline-none transition-all"
-                                        placeholder="Enter your email"
+                                        placeholder="Enter your Username"
                                     />
                                     <Clerk.FieldError className="text-sm text-red-600" />
                                 </Clerk.Field>

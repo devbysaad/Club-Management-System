@@ -34,7 +34,7 @@ const AdminPage = () => {
           <UserCard type="player" />
           <UserCard type="coach" />
           <UserCard type="parent" />
-          <UserCard type="admin" />
+          <UserCard type="staff" />
         </div>
 
         {/* MIDDLE CHARTS */}

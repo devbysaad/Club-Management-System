@@ -71,16 +71,46 @@ const TeacherForm = ({
         </div>
         <div className="grid grid-cols-1 gap-4">
           <InputField
+            label="Username"
+            name="username"
+            defaultValue={data?.username}
+            register={register}
+            error={errors?.username}
+          />
+          <InputField
             label="Email"
             name="email"
             defaultValue={data?.email}
             register={register}
             error={errors?.email}
           />
+
+          {/* Password Fields - Only show for create */}
+          {type === "create" && (
+            <>
+              <InputField
+                label="Password"
+                name="password"
+                type="password"
+                register={register}
+                error={errors?.password}
+              />
+              <InputField
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                register={register}
+                error={errors?.confirmPassword}
+              />
+            </>
+          )}
+
           <div className="p-3 rounded-lg bg-fcBlue/10 border border-fcBlue/30">
             <p className="text-xs text-[var(--text-muted)] flex items-center gap-2">
               <span className="text-fcBlue">ℹ️</span>
-              An invitation email will be sent to this address. The coach will set their own password via the secure link.
+              {type === "create"
+                ? "Coach will use this email and password to log in to their account."
+                : "An invitation email will be sent to this address. The coach will set their own password via the secure link."}
             </p>
           </div>
         </div>

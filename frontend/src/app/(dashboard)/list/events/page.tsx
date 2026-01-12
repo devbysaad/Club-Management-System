@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { Prisma, Event } from "@prisma/client";
 
@@ -14,8 +14,8 @@ const EventListPage = async ({
   searchParams: { [key: string]: string | undefined };
 }) => {
   // Get user role from Clerk session claims
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const user = await currentUser();
+  const role = (user?.publicMetadata?.role as string)?.toLowerCase();
 
   const columns = [
     {
@@ -46,7 +46,7 @@ const EventListPage = async ({
       accessor: "endTime",
       className: "hidden lg:table-cell",
     },
-    ...(role === "admin"
+    ...(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff"
       ? [
         {
           header: "Actions",
@@ -110,7 +110,7 @@ const EventListPage = async ({
             hour12: false,
           })}
         </td>
-        {role === "admin" && (
+        {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
           <td>
             <div className="flex items-center gap-2">
               <FormModal table="event" type="update" data={item} />
@@ -181,7 +181,7 @@ const EventListPage = async ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
             </button>
-            {role === "admin" && <FormModal table="event" type="create" />}
+            {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && <FormModal table="event" type="create" />}
           </div>
         </div>
       </div>

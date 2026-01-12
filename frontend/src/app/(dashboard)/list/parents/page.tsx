@@ -3,7 +3,7 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import { ITEM_PER_PAGE } from "@/lib/setting";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
@@ -45,9 +45,9 @@ const ParentListPage = async ({
   const { coachId, page, search } = searchParams;
   const currentPage = page ? parseInt(page) : 1;
 
-  // Get user role from Clerk session claims
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  // Get user role from Clerk - use currentUser() to access publicMetadata
+  const user = await currentUser();
+  const role = (user?.publicMetadata?.role as string)?.toLowerCase();
 
   // Build query
   const query: any = {};
@@ -235,7 +235,7 @@ const ParentListPage = async ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
           </Link>
-          {role === "admin" && (
+          {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
             <>
               <FormModal table="parent" type="update" data={item} />
               <FormModal table="parent" type="delete" id={item.id} />
@@ -281,7 +281,7 @@ const ParentListPage = async ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
             </button>
-            {role === "admin" && <FormModal table="parent" type="create" />}
+            {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && <FormModal table="parent" type="create" />}
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ export const coachSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
     displayId: z.string().optional(),
+    username: z.string().min(3, { message: "Username must be at least 3 characters" }),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z
@@ -21,6 +22,11 @@ export const coachSchema = z.object({
     sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
     bloodType: z.string().optional(),
     ageGroups: z.array(z.string()).optional(), // age group ids
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 export type CoachSchema = z.infer<typeof coachSchema>;
@@ -32,6 +38,7 @@ export const studentSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
     displayId: z.string().optional(),
+    username: z.string().min(3, { message: "Username must be at least 3 characters" }),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z
@@ -49,6 +56,11 @@ export const studentSchema = z.object({
     bloodType: z.string().optional(),
     ageGroupId: z.string().min(1, { message: "Age group is required!" }),
     parentId: z.string().min(1, { message: "Parent is required!" }),
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 export type StudentSchema = z.infer<typeof studentSchema>;
@@ -59,6 +71,7 @@ export type StudentSchema = z.infer<typeof studentSchema>;
 export const parentSchema = z.object({
     id: z.string().optional(),
     userId: z.string().optional(),
+    username: z.string().min(3, { message: "Username must be at least 3 characters" }),
     firstName: z.string().min(1, { message: "First name is required!" }),
     lastName: z.string().min(1, { message: "Last name is required!" }),
     email: z
@@ -68,6 +81,11 @@ export const parentSchema = z.object({
         .or(z.literal("")),
     phone: z.string().optional(),
     address: z.string().optional(),
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 export type ParentSchema = z.infer<typeof parentSchema>;

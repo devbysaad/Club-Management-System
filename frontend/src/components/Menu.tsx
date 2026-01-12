@@ -13,31 +13,37 @@ const menuItems = [
         icon: "/home.png",
         label: "Dashboard",
         href: "/admin",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/teacher.png",
         label: "Coaches",
         href: "/list/teachers",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/student.png",
         label: "Players",
         href: "/list/students",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/parent.png",
         label: "Parents",
         href: "/list/parents",
-        visible: ["admin", "teacher"],
+        visible: ["admin", "staff", "teacher"],
+      },
+      {
+        icon: "/setting.png",
+        label: "Staff",
+        href: "/list/staff",
+        visible: ["admin", "staff"],
       },
       {
         icon: "/class.png",
         label: "Teams",
         href: "/list/classes",
-        visible: ["admin", "teacher"],
+        visible: ["admin", "staff", "teacher"],
       },
     ],
   },
@@ -83,31 +89,31 @@ const menuItems = [
         icon: "/calendar.png",
         label: "Events",
         href: "/list/events",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/announcement.png",
         label: "News",
         href: "/list/announcements",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/assignment.png",
         label: "Shop",
         href: "/shop",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/assignment.png",
         label: "Orders",
         href: "/admin/orders",
-        visible: ["admin"],
+        visible: ["admin", "staff"],
       },
       {
         icon: "/announcement.png",
         label: "Admissions",
         href: "/admin/admission",
-        visible: ["admin"],
+        visible: ["admin", "staff"],
       },
     ],
   },
@@ -118,13 +124,13 @@ const menuItems = [
         icon: "/profile.png",
         label: "Profile",
         href: "/profile",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/setting.png",
         label: "About",
         href: "/about",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
     ],
   },
@@ -136,6 +142,14 @@ const Menu = () => {
   const pathname = usePathname();
   const { isLoaded, user } = useUser();
   const role = user?.publicMetadata?.role as string | undefined;
+
+  // Debug logging
+  console.log("🔍 MENU DEBUG:", {
+    isLoaded,
+    hasUser: !!user,
+    role,
+    publicMetadata: user?.publicMetadata
+  });
 
   // Show loading skeleton while auth is loading
   if (!isLoaded) {
@@ -155,6 +169,20 @@ const Menu = () => {
     );
   }
 
+  // If no role is set, show error message
+  if (!role) {
+    return (
+      <div className="py-4 px-4">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <p className="text-red-500 text-sm font-medium mb-2">⚠️ No Role Assigned</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Please set your role in Clerk Dashboard → Users → Public Metadata → Add "role":"admin"
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="py-2 px-2 lg:px-3">
       {menuItems.map((section) => (
@@ -170,7 +198,10 @@ const Menu = () => {
           {/* Menu Items */}
           <div className="flex flex-col gap-1">
             {section.items.map((item) => {
-              if (role && item.visible.includes(role)) {
+              // Convert role to lowercase for case-insensitive comparison
+              const normalizedRole = role?.toLowerCase();
+
+              if (normalizedRole && item.visible.includes(normalizedRole)) {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 
                 return (

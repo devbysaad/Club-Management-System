@@ -18,6 +18,7 @@ import {
     withRole,
     withTransaction,
     ActionResult,
+    createClerkUserWithPassword,
     sendClerkInvitation,
     logActivity,
     softDelete,
@@ -25,6 +26,7 @@ import {
     getCurrentUser,
     coachOwnsAgeGroup,
     parentOwnsStudent,
+    deleteFromClerk,
 } from "./action-helpers";
 import { Role } from "@prisma/client";
 
@@ -38,20 +40,22 @@ export const createCoach = async (
     currentState: CurrentState,
     data: CoachSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
-        // Create Clerk user OUTSIDE transaction
-        const inviteResult = await sendClerkInvitation({
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        // Create Clerk user with password from form
+        const clerkResult = await createClerkUserWithPassword({
             email: data.email!,
-            role: Role.COACH,
+            password: data.password,
+            username: data.username,
             firstName: data.firstName,
             lastName: data.lastName,
+            role: Role.COACH,
         });
 
-        if (!inviteResult.success) {
-            return inviteResult;
+        if (!clerkResult.success) {
+            return clerkResult;
         }
 
-        const clerkUserId = inviteResult.data!.clerkUserId;
+        const clerkUserId = clerkResult.data!.clerkUserId;
 
         // Save to database in transaction
         return withTransaction(async (tx) => {
@@ -127,7 +131,7 @@ export const updateCoach = async (
         return { success: false, error: true, message: "Coach ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             // 1. Update Coach profile
             const coach = await tx.coach.update({
@@ -189,23 +193,52 @@ export const deleteCoach = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
-        // Soft delete for coaches (they might have historical data)
-        const result = await softDelete(prisma.coach, id);
-
-        if (result.success) {
-            await logActivity({
-                action: "DELETE_COACH",
-                performedBy: user.id,
-                targetType: "Coach",
-                targetId: id,
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        try {
+            // 1. Get the coach record to find their userId
+            const coach = await prisma.coach.findUnique({
+                where: { id },
+                select: { userId: true },
             });
 
-            revalidatePath("/list/teachers");
-            revalidatePath("/list/coaches");
-        }
+            if (!coach) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "Coach not found",
+                };
+            }
 
-        return result;
+            // 2. Delete from Clerk first
+            const clerkResult = await deleteFromClerk(coach.userId);
+            if (!clerkResult.success) {
+                console.error("[DELETE_COACH] Clerk deletion failed:", clerkResult.message);
+                // Continue with soft delete even if Clerk deletion fails
+            }
+
+            // 3. Soft delete from database
+            const result = await softDelete(prisma.coach, id);
+
+            if (result.success) {
+                await logActivity({
+                    action: "DELETE_COACH",
+                    performedBy: user.id,
+                    targetType: "Coach",
+                    targetId: id,
+                });
+
+                revalidatePath("/list/teachers");
+                revalidatePath("/list/coaches");
+            }
+
+            return result;
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to delete coach",
+            };
+        }
     });
 };
 
@@ -217,17 +250,28 @@ export const createStudent = async (
     currentState: CurrentState,
     data: StudentSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
-        // STEP 1: Create Clerk user OUTSIDE transaction
-        const clerkResult = await sendClerkInvitation({
-            email: data.email!,
-            role: Role.STUDENT,
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        console.log('🔵 [createStudent] Starting student creation:', {
+            email: data.email,
+            phone: data.phone,
             firstName: data.firstName,
-            lastName: data.lastName,
+            lastName: data.lastName
         });
 
-        // FAIL if Clerk user creation failed
+        // Create Clerk user with password from form
+        const clerkResult = await createClerkUserWithPassword({
+            email: data.email!,
+            password: data.password,
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            role: Role.STUDENT,
+        });
+
+        console.log('🔵 [createStudent] Clerk result:', clerkResult);
+
         if (!clerkResult.success) {
+            console.error('❌ [createStudent] Clerk creation failed:', clerkResult.message);
             return clerkResult;
         }
 
@@ -309,7 +353,7 @@ export const updateStudent = async (
         return { success: false, error: true, message: "Student ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const student = await tx.student.update({
                 where: { id: data.id },
@@ -356,7 +400,7 @@ export const deleteStudent = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         // Soft delete for students (financial/historical data)
         const result = await softDelete(prisma.student, id);
 
@@ -383,16 +427,17 @@ export const createParent = async (
     currentState: CurrentState,
     data: ParentSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
-        // Create Clerk user OUTSIDE transaction
-        const clerkResult = await sendClerkInvitation({
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        // Create Clerk user with password from form
+        const clerkResult = await createClerkUserWithPassword({
             email: data.email!,
-            role: Role.PARENT,
+            password: data.password,
+            username: data.username,
             firstName: data.firstName,
             lastName: data.lastName,
+            role: Role.PARENT,
         });
 
-        // FAIL if Clerk user creation failed
         if (!clerkResult.success) {
             return clerkResult;
         }
@@ -457,7 +502,7 @@ export const updateParent = async (
         return { success: false, error: true, message: "Parent ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const parent = await tx.parent.update({
                 where: { id: data.id },
@@ -495,9 +540,43 @@ export const deleteParent = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         try {
-            // Soft delete parent
+            // 1. Get parent record with userId
+            const parent = await prisma.parent.findUnique({
+                where: { id },
+                select: { userId: true },
+            });
+
+            if (!parent) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "Parent not found",
+                };
+            }
+
+            // 2. Get all children's userIds
+            const students = await prisma.student.findMany({
+                where: { parentId: id },
+                select: { userId: true },
+            });
+
+            // 3. Delete parent from Clerk
+            const parentClerkResult = await deleteFromClerk(parent.userId);
+            if (!parentClerkResult.success) {
+                console.error("[DELETE_PARENT] Parent Clerk deletion failed:", parentClerkResult.message);
+            }
+
+            // 4. Delete all children from Clerk
+            for (const student of students) {
+                const studentClerkResult = await deleteFromClerk(student.userId);
+                if (!studentClerkResult.success) {
+                    console.error("[DELETE_PARENT] Student Clerk deletion failed:", studentClerkResult.message);
+                }
+            }
+
+            // 5. Soft delete parent from database
             await prisma.parent.update({
                 where: { id },
                 data: {
@@ -506,7 +585,7 @@ export const deleteParent = async (
                 },
             });
 
-            // CASCADE: Also soft delete all children (students)
+            // 6. CASCADE: Also soft delete all children (students)
             await prisma.student.updateMany({
                 where: { parentId: id },
                 data: {
@@ -548,7 +627,7 @@ export const createAgeGroup = async (
     currentState: CurrentState,
     data: AgeGroupSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const ageGroup = await tx.ageGroup.create({
                 data: {
@@ -587,7 +666,7 @@ export const updateAgeGroup = async (
         return { success: false, error: true, message: "Age group ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const ageGroup = await tx.ageGroup.update({
                 where: { id: data.id },
@@ -625,7 +704,7 @@ export const deleteAgeGroup = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         // Soft delete for age groups (historical data)
         const result = await softDelete(prisma.ageGroup, id);
 
@@ -652,7 +731,7 @@ export const createEvent = async (
     currentState: CurrentState,
     data: EventSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const event = await tx.event.create({
                 data: {
@@ -693,7 +772,7 @@ export const updateEvent = async (
         return { success: false, error: true, message: "Event ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const event = await tx.event.update({
                 where: { id: data.id },
@@ -733,7 +812,7 @@ export const deleteEvent = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         // Soft delete for events
         const result = await softDelete(prisma.event, id);
 
@@ -760,7 +839,7 @@ export const createAnnouncement = async (
     currentState: CurrentState,
     data: AnnouncementSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const announcement = await tx.announcement.create({
                 data: {
@@ -799,7 +878,7 @@ export const updateAnnouncement = async (
         return { success: false, error: true, message: "Announcement ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const announcement = await tx.announcement.update({
                 where: { id: data.id },
@@ -837,7 +916,7 @@ export const deleteAnnouncement = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         // Soft delete for announcements
         const result = await softDelete(prisma.announcement, id);
 
@@ -990,7 +1069,7 @@ export const createFixture = async (
     currentState: CurrentState,
     data: FixtureSchema
 ): Promise<ActionResult> => {
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const fixture = await tx.fixture.create({
                 data: {
@@ -1032,7 +1111,7 @@ export const updateFixture = async (
         return { success: false, error: true, message: "Fixture ID is required" };
     }
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         return withTransaction(async (tx) => {
             const fixture = await tx.fixture.update({
                 where: { id: data.id },
@@ -1073,7 +1152,7 @@ export const deleteFixture = async (
 ): Promise<ActionResult> => {
     const id = data.get("id") as string;
 
-    return withRole([Role.ADMIN], async (user) => {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
         // Soft delete for fixtures
         const result = await softDelete(prisma.fixture, id);
 

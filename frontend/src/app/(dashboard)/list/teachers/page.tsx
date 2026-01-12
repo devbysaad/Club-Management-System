@@ -4,7 +4,7 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
@@ -119,7 +119,7 @@ const renderRow = (
       <td className="hidden lg:table-cell text-fcTextMuted">{item.phone || "—"}</td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && <CoachAttendanceButtons coachId={item.id} markedStatus={markedStatus} />}
+          {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && <CoachAttendanceButtons coachId={item.id} markedStatus={markedStatus} />}
           <Link href={`/list/teachers/${item.id}`}>
             <button className="w-7 h-7 flex items-center justify-center rounded-full bg-fcSky">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ const renderRow = (
               </svg>
             </button>
           </Link>
-          {role === "admin" && (
+          {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
             <>
               <FormModal
                 table="teacher"
@@ -154,9 +154,10 @@ const CoachListPage = async ({
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  // Get user role from Clerk session claims
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  // Get user role from Clerk - use currentUser() to access publicMetadata
+  const user = await currentUser();
+  const role = (user?.publicMetadata?.role as string)?.toLowerCase();
+
 
   // Build query conditions
   const query: Prisma.CoachWhereInput = {};
@@ -359,7 +360,7 @@ const CoachListPage = async ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
             </button>
-            {role === "admin" && (
+            {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
               <FormModal
                 table="teacher"
                 type="create"

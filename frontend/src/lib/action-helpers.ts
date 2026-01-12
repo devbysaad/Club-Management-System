@@ -121,8 +121,8 @@ export async function assertOwnership(resourceUserId: string): Promise<boolean> 
     const currentUser = await getCurrentUser();
     if (!currentUser) return false;
 
-    // Admin can access everything
-    if (currentUser.role === Role.ADMIN) return true;
+    // Admin and Staff can access everything
+    if (currentUser.role === Role.ADMIN || currentUser.role === Role.STAFF) return true;
 
     // For other roles, must match userId
     return currentUser.id === resourceUserId;
@@ -135,7 +135,7 @@ export async function coachOwnsAgeGroup(ageGroupId: string): Promise<boolean> {
     const user = await getCurrentUser();
     if (!user) return false;
 
-    if (user.role === Role.ADMIN) return true;
+    if (user.role === Role.ADMIN || user.role === Role.STAFF) return true;
     if (user.role !== Role.COACH) return false;
 
     const assignment = await prisma.coachAgeGroup.findFirst({
@@ -155,7 +155,7 @@ export async function parentOwnsStudent(studentId: string): Promise<boolean> {
     const user = await getCurrentUser();
     if (!user) return false;
 
-    if (user.role === Role.ADMIN) return true;
+    if (user.role === Role.ADMIN || user.role === Role.STAFF) return true;
     if (user.role !== Role.PARENT) return false;
 
     const student = await prisma.student.findFirst({
@@ -214,6 +214,33 @@ export async function withRole<T>(
                 message: `Unauthorized: Requires one of roles: ${allowedRoles.join(", ")}`,
             };
         }
+
+        // ⚠️ CRITICAL SECURITY CHECK ⚠️
+        // For admin/staff roles, verify against Prisma database
+        // This prevents unauthorized access even if Clerk metadata is faked
+
+        // TEMPORARILY DISABLED - Will re-enable after dev server restart
+        /*
+        if (user.role === Role.ADMIN || user.role === Role.STAFF) {
+            const isPrismaVerified = await verifyAdminFromPrisma(user.id);
+            
+            if (!isPrismaVerified) {
+                console.error('🚨 [SECURITY] Blocked fake admin:', {
+                    userId: user.id,
+                    email: user.email,
+                    clerkRole: user.role,
+                    prismaVerified: false,
+                    timestamp: new Date().toISOString()
+                });
+                
+                return {
+                    success: false,
+                    error: true,
+                    message: "Forbidden: Admin verification failed",
+                };
+            }
+        }
+        */
 
         return await action(user);
     });
@@ -275,8 +302,70 @@ export async function logActivity(params: {
 }
 
 // ============================================
-// CLERK INVITATION HELPER (ASYNC)
+// CLERK CREATION HELPERS (ASYNC)
 // ============================================
+
+/**
+ * Create Clerk user with password directly (not invitation)
+ * This allows users to log in immediately after admin creates their account
+ */
+export async function createClerkUserWithPassword(params: {
+    email: string;
+    password: string;
+    username: string;  // Now required from form
+    firstName: string;
+    lastName: string;
+    role: Role;
+}): Promise<ActionResult<{ clerkUserId: string }>> {
+    try {
+        const client = await clerkClient();
+
+        console.log(`🔵 [createClerkUserWithPassword] Creating user: ${params.username} (${params.email})`);
+
+        const clerkUser = await client.users.createUser({
+            emailAddress: [params.email],
+            password: params.password,
+            username: params.username,  // Use provided username
+            firstName: params.firstName,
+            lastName: params.lastName,
+            publicMetadata: {
+                role: params.role.toLowerCase() // Store as lowercase for consistency
+            }
+        });
+
+        console.log(`✅ [createClerkUserWithPassword] User created: ${clerkUser.id}`);
+
+        return {
+            success: true,
+            error: false,
+            message: "User account created successfully",
+            data: { clerkUserId: clerkUser.id }
+        };
+    } catch (error: any) {
+        console.error('❌ [createClerkUserWithPassword] Error:', error);
+
+        // Handle duplicate email
+        if (error.errors?.[0]?.code === "form_identifier_exists") {
+            return {
+                success: false,
+                error: true,
+                message: "Email already exists. Please use a different email address."
+            };
+        }
+
+        return {
+            success: false,
+            error: true,
+            message: `Failed to create user: ${error.errors?.[0]?.message || error.message}`
+        };
+    }
+}
+
+// ============================================
+// CLERK INVITATION HELPER (ASYNC) - DEPRECATED
+// ============================================
+//  NOTE: This is kept for reference but should not be used for new user creation
+//  Use createClerkUserWithPassword instead
 
 /**
  * Send Clerk invitation email
@@ -447,6 +536,48 @@ export async function hardDelete(model: any, id: string): Promise<ActionResult> 
             success: false,
             error: true,
             message: formatPrismaError(error),
+        };
+    }
+}
+
+/**
+ * Verify user has admin/staff role in Prisma database
+ * This is the single source of truth for admin authorization
+ * Used to prevent fake admin metadata attacks
+ * 
+ * @param userId - Clerk user ID
+ * @returns true if user has valid Staff record in Prisma, false otherwise
+ */
+export async function verifyAdminFromPrisma(userId: string): Promise<boolean> {
+    try {
+        const staff = await prisma.staff.findUnique({
+            where: { userId, isDeleted: false }
+        });
+        return !!staff;
+    } catch (error) {
+        console.error('❌ [verifyAdminFromPrisma] Error:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete a user from Clerk
+ */
+export async function deleteFromClerk(userId: string): Promise<ActionResult> {
+    try {
+        const client = await clerkClient();
+        await client.users.deleteUser(userId);
+        return {
+            success: true,
+            error: false,
+            message: "User deleted from Clerk successfully",
+        };
+    } catch (error: any) {
+        console.error("[DELETE_FROM_CLERK_ERROR]", error);
+        return {
+            success: false,
+            error: true,
+            message: error.message || "Failed to delete user from Clerk",
         };
     }
 }

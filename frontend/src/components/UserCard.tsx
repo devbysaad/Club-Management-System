@@ -19,7 +19,7 @@ const cardConfigs: Record<string, { gradient: string; iconBg: string; icon: stri
     icon: "👥",
     accent: "border-fcGold"
   },
-  admin: {
+  staff: {
     gradient: "from-fcGreen/20 to-fcGreen/10",
     iconBg: "bg-fcGreen/20",
     icon: "🛡️",
@@ -31,17 +31,17 @@ const displayNames: Record<string, string> = {
   player: "Players",
   coach: "Coaches",
   parent: "Parents",
-  admin: "Admins",
+  staff: "Staff",
   student: "Players",
   teacher: "Coaches",
 };
 
-type UserType = "player" | "coach" | "parent" | "admin" | "student" | "teacher";
+type UserType = "player" | "coach" | "parent" | "staff" | "student" | "teacher";
 
 const UserCard = async ({ type }: { type: UserType }) => {
   // Map the type to the correct Prisma model
   const modelMap: Record<UserType, any> = {
-    admin: prisma.admin,
+    staff: prisma.staff,
     teacher: prisma.coach, // Teacher maps to Coach in the schema
     coach: prisma.coach,
     student: prisma.student,

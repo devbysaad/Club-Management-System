@@ -101,7 +101,7 @@ const renderRow = (
 
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && <AttendanceButtons studentId={item.id} markedStatus={markedStatus} />}
+          {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && <AttendanceButtons studentId={item.id} markedStatus={markedStatus} />}
 
           <Link href={`/list/students/${item.id}`}>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-fcBlue/20 hover:bg-fcBlue/30 transition-colors">
@@ -127,7 +127,7 @@ const renderRow = (
             </button>
           </Link>
 
-          {role === "admin" && (
+          {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
             <>
               <FormModal
                 table="student"
@@ -333,7 +333,7 @@ const PlayerListPage = async ({
           <TableSearch />
 
           <div className="flex items-center gap-2">
-            {role === "admin" && (
+            {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && (
               <FormModal
                 table="student"
                 type="create"
