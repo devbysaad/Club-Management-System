@@ -3,9 +3,8 @@
 import Announcements from "@/components/Announcements";
 import BigCalendarContainer from "@/components/BigCalendarContainer";
 import Performance from "@/components/Performance";
-import FeePaymentCalendar from "@/components/FeePaymentCalendar";
+import FeeGridWrapper from "@/components/FeeGridWrapper";
 import prisma from "@/lib/prisma";
-import { getStudentFees } from "@/lib/fee-actions";
 import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
@@ -75,13 +74,25 @@ const SingleStudentPage = async ({
       ? Math.round((presentCount / totalAttendances) * 100)
       : 0;
 
-  // Get current user and check if admin
+  // Get current user
   const user = await currentUser();
-  const isAdmin = user?.publicMetadata?.role === 'ADMIN';
 
-  // Fetch fee data for current year (admin only)
+  // Get current year for fee records
   const currentYear = new Date().getFullYear();
-  const fees = isAdmin ? await getStudentFees(studentId, currentYear) : [];
+  const currentMonth = new Date().getMonth() + 1;
+
+  // Get current month's fee status
+  const currentMonthFee = await prisma.playerFeeRecord.findFirst({
+    where: {
+      playerId: studentId,
+      month: currentMonth,
+      year: currentYear,
+      isDeleted: false,
+    },
+    include: {
+      feePlan: true,
+    },
+  });
 
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
@@ -223,15 +234,41 @@ const SingleStudentPage = async ({
               </div>
             </div>
 
-            <div className="glass-card rounded-xl p-4 flex flex-col gap-3">
-              <div className="w-10 h-10 rounded-lg bg-fcGold/20 flex items-center justify-center">
-                <Image src="/singleClass.png" alt="" width={20} height={20} />
+            {/* Fee Status Card */}
+            <div className={`glass-card rounded-xl p-4 flex flex-col gap-3 ${currentMonthFee?.status === "PAID"
+                ? "bg-fcGreen/10 border-2 border-fcGreen/30"
+                : currentMonthFee?.status === "PARTIAL"
+                  ? "bg-fcGold/10 border-2 border-fcGold/30"
+                  : "bg-fcGarnet/10 border-2 border-fcGarnet/30"
+              }`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentMonthFee?.status === "PAID"
+                  ? "bg-fcGreen/20"
+                  : currentMonthFee?.status === "PARTIAL"
+                    ? "bg-fcGold/20"
+                    : "bg-fcGarnet/20"
+                }`}>
+                <span className="text-xl">
+                  {currentMonthFee?.status === "PAID" ? "✓" : "💰"}
+                </span>
               </div>
               <div>
-                <h1 className="text-xl font-heading font-bold text-white">
-                  {student.sex}
+                <h1 className={`text-lg font-heading font-bold ${currentMonthFee?.status === "PAID"
+                    ? "text-fcGreen"
+                    : currentMonthFee?.status === "PARTIAL"
+                      ? "text-fcGold"
+                      : "text-fcGarnet"
+                  }`}>
+                  {currentMonthFee?.status === "PAID"
+                    ? "Paid"
+                    : currentMonthFee?.status === "PARTIAL"
+                      ? "Partial"
+                      : currentMonthFee
+                        ? "Unpaid"
+                        : "No Record"}
                 </h1>
-                <span className="text-xs text-fcTextMuted">Gender</span>
+                <span className="text-xs text-fcTextMuted">
+                  {new Date().toLocaleDateString("en-US", { month: "long" })} Fee
+                </span>
               </div>
             </div>
           </div>
@@ -339,14 +376,11 @@ const SingleStudentPage = async ({
           </div>
         </div>
 
-        {/* FEE PAYMENT CALENDAR - Admin Only */}
-        {isAdmin && (
-          <FeePaymentCalendar
-            studentId={studentId}
-            studentName={`${student.firstName} ${student.lastName}`}
+        {/* FEE GRID - Admin/Staff Only */}
+        {(user?.publicMetadata?.role?.toString().toLowerCase() === "admin" || user?.publicMetadata?.role?.toString().toLowerCase() === "staff") && (
+          <FeeGridWrapper
+            playerId={studentId}
             year={currentYear}
-            fees={fees}
-            isAdmin={isAdmin}
           />
         )}
 

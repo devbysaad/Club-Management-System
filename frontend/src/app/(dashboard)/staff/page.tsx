@@ -1,63 +1,136 @@
 import Announcements from "@/components/Announcements";
-import AttendanceChartContainer from "@/components/AttendanceChartContainer";
-import CountChartContainer from "@/components/CountChartContainer";
-import EventCalendarContainer from "@/components/EventCalendarContainer";
-import FinanceChart from "@/components/FinanceChart";
-import UserCard from "@/components/UserCard";
+import EventCalendar from "@/components/EventCalendar";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 
-const StaffPage = () => {
+const StaffPage = async () => {
+    const { userId } = await auth();
+
+    // Check if user is authenticated
+    if (!userId) {
+        return (
+            <div className="p-4">
+                <p>Please log in to view this page.</p>
+            </div>
+        );
+    }
+
+    // Get the staff member record
+    const staff = await prisma.staff.findUnique({
+        where: {
+            userId: userId,
+        },
+    });
+
+    if (!staff) {
+        return (
+            <div className="p-4">
+                <p>Staff profile not found for this account.</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="p-4 flex gap-4 flex-col md:flex-row">
+        <div className="flex-1 p-4 flex gap-4 flex-col xl:flex-row">
             {/* LEFT */}
-            <div className="w-full lg:w-2/3 flex flex-col gap-6">
-                {/* Welcome Banner */}
-                <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-fcGarnet/20 to-fcBlue/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-2xl">👋</span>
-                            <span className="text-xs px-2 py-1 rounded-full bg-fcGold/20 text-fcGold font-medium">
-                                Club Staff
-                            </span>
-                        </div>
-                        <h1 className="text-2xl font-heading font-bold text-white mb-1">
-                            Welcome back, <span className="gradient-text">Staff!</span>
+            <div className="w-full xl:w-2/3 space-y-4">
+                {/* Staff Profile Section */}
+                <div className="glass-card rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h1 className="text-2xl font-heading font-bold text-[var(--text-primary)]">
+                            👨‍💼 Staff Dashboard
                         </h1>
-                        <p className="text-sm text-fcTextMuted">
-                            Here&apos;s what&apos;s happening with your club today.
-                        </p>
+                    </div>
+
+                    <div className="glass-card rounded-xl p-6 border border-[var(--border-color)]">
+                        <div className="flex items-start gap-6">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-fcGarnet to-fcBlue flex items-center justify-center text-4xl">
+                                👤
+                            </div>
+                            <div className="flex-1">
+                                <h2 className="text-2xl font-heading font-bold text-[var(--text-primary)] mb-2">
+                                    {staff.firstName} {staff.lastName}
+                                </h2>
+                                <div className="space-y-2 text-[var(--text-muted)]">
+                                    {staff.email && (
+                                        <p className="flex items-center gap-2">
+                                            <span className="text-fcGold">📧</span>
+                                            {staff.email}
+                                        </p>
+                                    )}
+                                    {staff.phone && (
+                                        <p className="flex items-center gap-2">
+                                            <span className="text-fcGold">📱</span>
+                                            {staff.phone}
+                                        </p>
+                                    )}
+                                    {staff.address && (
+                                        <p className="flex items-center gap-2">
+                                            <span className="text-fcGold">📍</span>
+                                            {staff.address}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 inline-block px-4 py-2 rounded-lg bg-fcGarnet/20 border border-fcGarnet/30">
+                                    <span className="text-fcGarnet font-semibold text-sm">
+                                        ⭐ Staff Member
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* STAT CARDS */}
-                <div className="flex gap-4 justify-between flex-wrap">
-                    <UserCard type="player" />
-                    <UserCard type="coach" />
-                    <UserCard type="parent" />
-                    <UserCard type="staff" />
-                </div>
-
-                {/* MIDDLE CHARTS */}
-                <div className="flex gap-4 flex-col lg:flex-row">
-                    {/* COUNT CHART */}
-                    <div className="w-full lg:w-1/3 h-[450px]">
-                        <CountChartContainer />
+                {/* Quick Stats */}
+                <div className="grid md:grid-cols-3 gap-4">
+                    <div className="glass-card rounded-xl p-6 border border-[var(--border-color)]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-fcBlue/20 flex items-center justify-center text-2xl">
+                                🎯
+                            </div>
+                            <div>
+                                <p className="text-sm text-[var(--text-muted)]">Role</p>
+                                <p className="text-lg font-heading font-bold text-[var(--text-primary)]">
+                                    Administrator
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    {/* ATTENDANCE CHART */}
-                    <div className="w-full lg:w-2/3 h-[450px]">
-                        <AttendanceChartContainer />
-                    </div>
-                </div>
 
-                {/* BOTTOM CHART */}
-                <div className="w-full h-[500px]">
-                    <FinanceChart />
+                    <div className="glass-card rounded-xl p-6 border border-[var(--border-color)]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-fcGreen/20 flex items-center justify-center text-2xl">
+                                ✅
+                            </div>
+                            <div>
+                                <p className="text-sm text-[var(--text-muted)]">Status</p>
+                                <p className="text-lg font-heading font-bold text-fcGreen">
+                                    Active
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="glass-card rounded-xl p-6 border border-[var(--border-color)]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-fcGold/20 flex items-center justify-center text-2xl">
+                                🔐
+                            </div>
+                            <div>
+                                <p className="text-sm text-[var(--text-muted)]">Access</p>
+                                <p className="text-lg font-heading font-bold text-[var(--text-primary)]">
+                                    Full Access
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* RIGHT */}
-            <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                <EventCalendarContainer searchParams={{}} />
+            <div className="w-full xl:w-1/3 flex flex-col gap-8">
+                <EventCalendar />
                 <Announcements />
             </div>
         </div>

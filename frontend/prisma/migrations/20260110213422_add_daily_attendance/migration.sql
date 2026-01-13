@@ -1,4 +1,5 @@
 -- CreateEnum
+-- CreateEnum
 CREATE TYPE "DailyAttendanceStatus" AS ENUM ('PRESENT', 'ABSENT');
 
 -- CreateTable

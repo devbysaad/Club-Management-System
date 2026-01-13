@@ -13,6 +13,7 @@ import {
   deleteEvent,
   deleteAnnouncement,
 } from "@/lib/actions";
+import { deleteStaff } from "@/lib/staff-actions";
 
 // =========================
 // LOADER COMPONENT
@@ -39,6 +40,7 @@ const PlaceholderForm = ({ type, table }: { type: "create" | "update"; table: st
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), { loading: Loader });
 const StudentForm = dynamic(() => import("./forms/StudentForm"), { loading: Loader });
 const ParentForm = dynamic(() => import("./forms/ParentForm"), { loading: Loader });
+const StaffForm = dynamic(() => import("./forms/StaffForm"), { loading: Loader });
 const AgeGroupForm = dynamic(() => import("./forms/AgeGroupForm"), { loading: Loader });
 const TrainingSessionForm = dynamic(() => import("./forms/TrainingSessionForm"), { loading: Loader });
 const FixtureForm = dynamic(() => import("./forms/FixtureForm"), { loading: Loader });
@@ -67,6 +69,9 @@ const forms: Record<
   ),
   parent: (type, data, relatedData, setOpen) => (
     <ParentForm type={type} data={data} {...relatedData} setOpen={setOpen} />
+  ),
+  staff: (type, data, relatedData, setOpen) => (
+    <StaffForm type={type} data={data} {...relatedData} setOpen={setOpen} />
   ),
   ageGroup: (type, data, relatedData, setOpen) => (
     <AgeGroupForm type={type} data={data} {...relatedData} setOpen={setOpen} />
@@ -144,6 +149,7 @@ const FormModal = ({
     teacher: deleteCoach,
     student: deleteStudent,
     parent: deleteParent,
+    staff: deleteStaff,
     class: deleteAgeGroup,
     ageGroup: deleteAgeGroup,
     event: deleteEvent,

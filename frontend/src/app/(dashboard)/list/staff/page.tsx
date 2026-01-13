@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { ITEM_PER_PAGE } from "@/lib/setting";
+import StaffAttendanceButtons from "@/components/StaffAttendanceButtons";
 
 type StaffList = {
     id: string;
@@ -34,12 +35,17 @@ const columns = [
         className: "hidden lg:table-cell",
     },
     {
+        header: "Attendance",
+        accessor: "attendance",
+        className: "hidden xl:table-cell",
+    },
+    {
         header: "Actions",
         accessor: "action",
     },
 ];
 
-const renderRow = (item: StaffList, role?: string) => {
+const renderRow = (item: StaffList, role?: string, markedStatus?: any) => {
     return (
         <tr
             key={item.id}
@@ -60,6 +66,9 @@ const renderRow = (item: StaffList, role?: string) => {
             </td>
             <td className="hidden md:table-cell text-fcTextMuted">{item.email || "—"}</td>
             <td className="hidden lg:table-cell text-fcTextMuted">{item.phone || "—"}</td>
+            <td className="hidden xl:table-cell">
+                {(role?.toLowerCase() === "admin" || role?.toLowerCase() === "staff") && <StaffAttendanceButtons staffId={item.id} markedStatus={markedStatus} />}
+            </td>
             <td>
                 <div className="flex items-center gap-2">
                     <Link href={`/list/staff/${item.id}`}>
@@ -72,8 +81,8 @@ const renderRow = (item: StaffList, role?: string) => {
                     </Link>
                     {(role === "admin" || role === "staff") && (
                         <>
-                            {/* <FormModal table="staff" type="update" data={item} /> */}
-                            {/* <FormModal table="staff" type="delete" id={item.id} /> */}
+                            <FormModal table="staff" type="update" data={item} />
+                            <FormModal table="staff" type="delete" id={item.id} />
                         </>
                     )}
                 </div>
@@ -185,18 +194,9 @@ const StaffListPage = async ({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                             </svg>
                         </button>
-                        {/* Create staff button - note: no form exists yet, this is a placeholder */}
+                        {/* Create staff button */}
                         {(role === "admin" || role === "staff") && (
-                            <button
-                                className="w-auto px-4 h-9 flex items-center justify-center gap-2 rounded-lg bg-fcBlue hover:bg-fcBlue/80 transition-colors text-white font-medium text-sm"
-                                disabled
-                                title="Staff creation form not yet implemented"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                <span className="hidden md:inline">Create Staff</span>
-                            </button>
+                            <FormModal table="staff" type="create" />
                         )}
                     </div>
                 </div>

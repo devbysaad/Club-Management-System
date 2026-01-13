@@ -18,6 +18,7 @@ const protectedRoutes = createRouteMatcher([
   "/teacher(.*)",
   "/student(.*)",
   "/parent(.*)",
+  "/staff(.*)",
   "/list/(.*)",
   "/profile(.*)",
 ]);

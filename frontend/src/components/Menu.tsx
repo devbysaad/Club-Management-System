@@ -31,7 +31,7 @@ const menuItems = [
         icon: "/parent.png",
         label: "Parents",
         href: "/list/parents",
-        visible: ["admin", "staff", "teacher"],
+        visible: ["admin", "staff", "teacher", "student", "parent"],
       },
       {
         icon: "/setting.png",
@@ -110,9 +110,15 @@ const menuItems = [
         visible: ["admin", "staff"],
       },
       {
-        icon: "/announcement.png",
+        icon: "/announcement.png",          
         label: "Admissions",
         href: "/admin/admission",
+        visible: ["admin", "staff"],
+      },
+      {
+        icon: "/finance.png",
+        label: "Fee Management",
+        href: "/admin/fees",
         visible: ["admin", "staff"],
       },
     ],

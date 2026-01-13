@@ -5,6 +5,7 @@ import {
     CoachSchema,
     StudentSchema,
     ParentSchema,
+    StaffSchema,
     AgeGroupSchema,
     TrainingSessionSchema,
     FixtureSchema,

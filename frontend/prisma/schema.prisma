@@ -103,15 +103,18 @@ model Staff {
   lastName  String
   email     String?
   phone     String?
+  address   String?
   photo     String? // URL to Clerk-managed photo
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  AppUser                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffDailyAttendance  StaffDailyAttendance[]
 
   @@index([userId])
+  @@map("staff")
 }
 
 model Coach {
@@ -194,6 +197,7 @@ model Student {
   enrollments     Enrollment[]
   orders          Order[]
   monthlyFees     MonthlyFee[]
+  feeRecords      PlayerFeeRecord[]
 
   @@index([userId])
   @@index([parentId])
@@ -365,6 +369,22 @@ model CoachDailyAttendance {
 
   @@unique([coachId, date])
   @@index([coachId])
+  @@index([date])
+}
+
+model StaffDailyAttendance {
+  id        String                @id @default(uuid())
+  staffId   String
+  date      DateTime // Date only (time set to midnight)
+  status    DailyAttendanceStatus
+  markedBy  String // Admin who marked it
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+  @@index([staffId])
   @@index([date])
 }
 
@@ -765,22 +785,99 @@ model ClerkSyncLog {
 }
 
 // ============================================
-// MONTHLY FEES (Student Tuition)
+// FEE MANAGEMENT SYSTEM
 // ============================================
+
 enum FeeStatus {
   UNPAID
   PARTIAL
   PAID
   OVERDUE
+  WAIVED
 }
 
+enum FeeFrequency {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  ONE_TIME
+}
+
+// Fee Plans - Define different types of fees
+model FeePlan {
+  id          String       @id @default(uuid())
+  name        String       // e.g., "Monthly Academy Fee", "Tournament Fee"
+  description String?
+  amount      Float        // Base fee amount
+  frequency   FeeFrequency @default(MONTHLY)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  feeRecords PlayerFeeRecord[]
+
+  @@index([isActive])
+  @@map("fee_plans")
+}
+
+// Player Fee Records - Individual fee instances for each player
+model PlayerFeeRecord {
+  id         String    @id @default(uuid())
+  playerId   String
+  feePlanId  String
+  month      Int       // 1-12
+  year       Int       // 2024, 2025, etc.
+  amount     Float     // Total amount due
+  paidAmount Float     @default(0) // Amount paid so far
+  status     FeeStatus @default(UNPAID)
+  dueDate    DateTime
+  notes      String?
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  player   Student      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  feePlan  FeePlan      @relation(fields: [feePlanId], references: [id])
+  payments FeePayment[]
+
+  @@unique([playerId, feePlanId, month, year])
+  @@index([playerId])
+  @@index([status])
+  @@index([month, year])
+  @@index([dueDate])
+  @@index([isDeleted])
+  @@map("player_fee_records")
+}
+
+// Fee Payments - Track individual payments against fee records
+model FeePayment {
+  id            String        @id @default(uuid())
+  feeRecordId   String
+  amount        Float
+  paymentMethod PaymentMethod @default(CASH)
+  paidAt        DateTime      @default(now())
+  receivedBy    String        // Staff/Admin userId who recorded payment
+  receiptNumber String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  feeRecord PlayerFeeRecord @relation(fields: [feeRecordId], references: [id], onDelete: Cascade)
+
+  @@index([feeRecordId])
+  @@index([paidAt])
+  @@map("fee_payments")
+}
+
+// Legacy MonthlyFee model (keeping for backward compatibility)
 model MonthlyFee {
   id         String    @id @default(uuid())
   studentId  String
   parentId   String
   amount     Float
-  month      Int // 1-12
-  year       Int // 2024, 2025, etc.
+  month      Int       // 1-12
+  year       Int       // 2024, 2025, etc.
   status     FeeStatus @default(UNPAID)
   dueDate    DateTime
   paidAt     DateTime?

@@ -1,153 +1,462 @@
-'use server';
+"use server";
 
-import { Role } from '@prisma/client';
-import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-import { emitSystemEvent } from '@/lib/systemEvents';
-import { currentUser } from '@clerk/nextjs/server';
+import { z } from "zod";
+import prisma from "./prisma";
+import { withRole } from "./action-helpers";
+import { Role, FeeStatus, FeeFrequency, PaymentMethod } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
-// Simple role check wrapper
-async function checkAdminRole() {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== 'ADMIN') {
-        throw new Error('Unauthorized: Admin access required');
-    }
-    return user;
+type ActionResult = {
+    success: boolean;
+    error: boolean;
+    message: string;
+    data?: any;
+};
+
+// ============================================
+// FEE PLAN MANAGEMENT (Admin Only)
+// ============================================
+
+const FeePlanSchema = z.object({
+    id: z.string().optional(),
+    name: z.string().min(1, "Name is required"),
+    description: z.string().optional(),
+    amount: z.number().min(0, "Amount must be positive"),
+    frequency: z.enum(["MONTHLY", "QUARTERLY", "YEARLY", "ONE_TIME"]).default("MONTHLY"),
+    isActive: z.boolean().default(true),
+});
+
+export async function createFeePlan(data: z.infer<typeof FeePlanSchema>): Promise<ActionResult> {
+    return withRole([Role.ADMIN], async (user) => {
+        try {
+            const validated = FeePlanSchema.parse(data);
+
+            const feePlan = await prisma.feePlan.create({
+                data: {
+                    name: validated.name,
+                    description: validated.description,
+                    amount: validated.amount,
+                    frequency: validated.frequency as FeeFrequency,
+                    isActive: validated.isActive,
+                },
+            });
+
+            revalidatePath("/admin/fees");
+            return {
+                success: true,
+                error: false,
+                message: "Fee plan created successfully",
+                data: feePlan,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to create fee plan",
+            };
+        }
+    });
 }
 
-// Mark monthly fee as paid
-export async function markFeeAsPaid(formData: FormData) {
+export async function getActiveFeePlans() {
     try {
-        // Check admin role
-        await checkAdminRole();
-
-        const studentId = formData.get('studentId') as string;
-        const month = parseInt(formData.get('month') as string);
-        const year = parseInt(formData.get('year') as string);
-        const amount = parseFloat(formData.get('amount') as string);
-        const sendEmail = formData.get('sendEmail') === 'true';
-
-        console.log(`💰 [FEE] Marking fee as paid for student ${studentId}, ${month}/${year}`);
-
-        // Find student with parent
-        const student = await prisma.student.findUnique({
-            where: { id: studentId },
-            include: { parent: true },
+        const feePlans = await prisma.feePlan.findMany({
+            where: { isActive: true },
+            orderBy: { createdAt: "desc" },
         });
+        return feePlans;
+    } catch (error) {
+        console.error("[GET_ACTIVE_FEE_PLANS] Error:", error);
+        return [];
+    }
+}
 
-        if (!student) {
-            return { success: false, error: true, message: 'Student not found' };
+/**
+ * Delete a fee plan (Admin only)
+ */
+export async function deleteFeePlan(feePlanId: string): Promise<ActionResult> {
+    return withRole([Role.ADMIN], async (user) => {
+        try {
+            // Check if plan has any fee records
+            const recordCount = await prisma.playerFeeRecord.count({
+                where: { feePlanId, isDeleted: false },
+            });
+
+            if (recordCount > 0) {
+                return {
+                    success: false,
+                    error: true,
+                    message: `Cannot delete fee plan. ${recordCount} fee records are using this plan. Delete those records first.`,
+                };
+            }
+
+            await prisma.feePlan.delete({
+                where: { id: feePlanId },
+            });
+
+            revalidatePath("/admin/fees");
+            return {
+                success: true,
+                error: false,
+                message: "Fee plan deleted successfully",
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to delete fee plan",
+            };
         }
+    });
+}
 
-        // Check if fee record exists
-        const existingFee = await prisma.monthlyFee.findUnique({
+// ============================================
+// FEE RECORD MANAGEMENT
+// ============================================
+
+/**
+ * Generate monthly fee records for all active players
+ */
+export async function generateMonthlyFeeRecords(month: number, year: number): Promise<ActionResult> {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        try {
+            // Get all active players
+            const activePlayers = await prisma.student.findMany({
+                where: { isDeleted: false },
+                select: { id: true, firstName: true, lastName: true },
+            });
+
+            // Get active monthly fee plan
+            const feePlan = await prisma.feePlan.findFirst({
+                where: { isActive: true, frequency: FeeFrequency.MONTHLY },
+            });
+
+            if (!feePlan) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "No active monthly fee plan found. Please create one first.",
+                };
+            }
+
+            let created = 0;
+            let skipped = 0;
+
+            for (const player of activePlayers) {
+                // Check if record already exists
+                const existing = await prisma.playerFeeRecord.findUnique({
+                    where: {
+                        playerId_feePlanId_month_year: {
+                            playerId: player.id,
+                            feePlanId: feePlan.id,
+                            month,
+                            year,
+                        },
+                    },
+                });
+
+                if (!existing) {
+                    await prisma.playerFeeRecord.create({
+                        data: {
+                            playerId: player.id,
+                            feePlanId: feePlan.id,
+                            month,
+                            year,
+                            amount: feePlan.amount,
+                            dueDate: new Date(year, month - 1, 5), // 5th of each month
+                            status: FeeStatus.UNPAID,
+                        },
+                    });
+                    created++;
+                } else {
+                    skipped++;
+                }
+            }
+
+            revalidatePath("/admin/fees");
+            revalidatePath("/list/students");
+
+            return {
+                success: true,
+                error: false,
+                message: `Generated ${created} fee records. Skipped ${skipped} existing records.`,
+                data: { created, skipped },
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to generate fee records",
+            };
+        }
+    });
+}
+
+/**
+ * Get fee records for a specific player
+ */
+export async function getPlayerFeeRecords(playerId: string, year?: number) {
+    try {
+        const currentYear = year || new Date().getFullYear();
+
+        const records = await prisma.playerFeeRecord.findMany({
             where: {
-                studentId_month_year: {
-                    studentId,
-                    month,
-                    year,
+                playerId,
+                year: currentYear,
+                isDeleted: false,
+            },
+            include: {
+                feePlan: true,
+                payments: {
+                    orderBy: { paidAt: "desc" },
                 },
             },
+            orderBy: { month: "asc" },
         });
 
-        let fee;
-
-        if (existingFee) {
-            // Update existing fee
-            fee = await prisma.monthlyFee.update({
-                where: { id: existingFee.id },
-                data: {
-                    status: 'PAID',
-                    paidAt: new Date(),
-                    paidAmount: amount,
-                },
-            });
-        } else {
-            // Create new fee record
-            const dueDate = new Date(year, month - 1, 5); // 5th of the month
-
-            fee = await prisma.monthlyFee.create({
-                data: {
-                    studentId,
-                    parentId: student.parentId,
-                    amount,
-                    month,
-                    year,
-                    status: 'PAID',
-                    dueDate,
-                    paidAt: new Date(),
-                    paidAmount: amount,
-                },
-            });
-        }
-
-        console.log(`✅ [FEE] Fee marked as paid: ${fee.id}`);
-
-        // Send confirmation email if requested
-        if (sendEmail) {
-            console.log(`📧 [FEE] Sending payment confirmation email`);
-            try {
-                await emitSystemEvent({ type: 'FEE_PAID', payload: { feeId: fee.id } });
-            } catch (emailError: any) {
-                console.error('⚠️ [FEE] Email sending failed:', emailError.message);
-                // Don't fail the entire operation if email fails
-            }
-        }
-
-        revalidatePath(`/list/students/${studentId}`);
-
-        return {
-            success: true,
-            error: false,
-            message: `Fee marked as paid for ${month}/${year}`,
-        };
-    } catch (error: any) {
-        console.error('❌ [FEE] Error marking fee as paid:', error);
-        return {
-            success: false,
-            error: true,
-            message: error.message || 'Failed to mark fee as paid',
-        };
+        return records;
+    } catch (error) {
+        console.error("[GET_PLAYER_FEE_RECORDS] Error:", error);
+        return [];
     }
 }
 
-// Get student fees for a year
-export async function getStudentFees(studentId: string, year: number) {
+/**
+ * Delete a fee record (Admin/Staff)
+ */
+export async function deleteFeeRecord(feeRecordId: string): Promise<ActionResult> {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        try {
+            // Check if record has any payments
+            const paymentCount = await prisma.feePayment.count({
+                where: { feeRecordId },
+            });
+
+            if (paymentCount > 0) {
+                return {
+                    success: false,
+                    error: true,
+                    message: `Cannot delete fee record. It has ${paymentCount} payment(s) recorded. Delete payments first.`,
+                };
+            }
+
+            await prisma.playerFeeRecord.update({
+                where: { id: feeRecordId },
+                data: { isDeleted: true },
+            });
+
+            revalidatePath("/admin/fees");
+            revalidatePath("/list/students");
+            return {
+                success: true,
+                error: false,
+                message: "Fee record deleted successfully",
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to delete fee record",
+            };
+        }
+    });
+}
+
+// ============================================
+// PAYMENT MANAGEMENT
+// ============================================
+
+const PaymentSchema = z.object({
+    feeRecordId: z.string(),
+    amount: z.number().min(0.01, "Amount must be greater than 0"),
+    paymentMethod: z.enum(["CREDIT_CARD", "DEBIT_CARD", "BANK_TRANSFER", "CASH", "PAYPAL", "STRIPE", "MOCK"]).default("CASH"),
+    receiptNumber: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+export async function recordPayment(data: z.infer<typeof PaymentSchema>): Promise<ActionResult> {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        try {
+            const validated = PaymentSchema.parse(data);
+
+            // Get the fee record
+            const feeRecord = await prisma.playerFeeRecord.findUnique({
+                where: { id: validated.feeRecordId },
+            });
+
+            if (!feeRecord) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "Fee record not found",
+                };
+            }
+
+            // Check if payment exceeds remaining amount
+            const remaining = feeRecord.amount - feeRecord.paidAmount;
+            if (validated.amount > remaining) {
+                return {
+                    success: false,
+                    error: true,
+                    message: `Payment amount (${validated.amount}) exceeds remaining balance (${remaining})`,
+                };
+            }
+
+            // Create payment record
+            const payment = await prisma.feePayment.create({
+                data: {
+                    feeRecordId: validated.feeRecordId,
+                    amount: validated.amount,
+                    paymentMethod: validated.paymentMethod as any,
+                    receivedBy: user.id,
+                    receiptNumber: validated.receiptNumber,
+                    notes: validated.notes,
+                },
+            });
+
+            // Update fee record
+            const newPaidAmount = feeRecord.paidAmount + validated.amount;
+            const percentage = (newPaidAmount / feeRecord.amount) * 100;
+
+            let newStatus: FeeStatus;
+            if (percentage >= 100) {
+                newStatus = FeeStatus.PAID;
+            } else if (percentage > 0) {
+                newStatus = FeeStatus.PARTIAL;
+            } else {
+                newStatus = FeeStatus.UNPAID;
+            }
+
+            await prisma.playerFeeRecord.update({
+                where: { id: validated.feeRecordId },
+                data: {
+                    paidAmount: newPaidAmount,
+                    status: newStatus,
+                },
+            });
+
+            revalidatePath(`/list/students/${feeRecord.playerId}`);
+            revalidatePath("/admin/fees");
+
+            return {
+                success: true,
+                error: false,
+                message: `Payment of ${validated.amount} recorded successfully`,
+                data: payment,
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to record payment",
+            };
+        }
+    });
+}
+
+/**
+ * Get payment history for a fee record
+ */
+export async function getPaymentHistory(feeRecordId: string) {
     try {
-        const fees = await prisma.monthlyFee.findMany({
+        const payments = await prisma.feePayment.findMany({
+            where: { feeRecordId },
+            orderBy: { paidAt: "desc" },
+        });
+        return payments;
+    } catch (error) {
+        console.error("[GET_PAYMENT_HISTORY] Error:", error);
+        return [];
+    }
+}
+
+// ============================================
+// REPORTS
+// ============================================
+
+/**
+ * Get list of players with unpaid fees
+ */
+export async function getUnpaidPlayers() {
+    try {
+        const unpaidRecords = await prisma.playerFeeRecord.findMany({
             where: {
-                studentId,
+                status: { in: [FeeStatus.UNPAID, FeeStatus.PARTIAL, FeeStatus.OVERDUE] },
+                isDeleted: false,
+            },
+            include: {
+                player: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        parent: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                phone: true,
+                            },
+                        },
+                    },
+                },
+                feePlan: true,
+            },
+            orderBy: { dueDate: "asc" },
+        });
+
+        return unpaidRecords;
+    } catch (error) {
+        console.error("[GET_UNPAID_PLAYERS] Error:", error);
+        return [];
+    }
+}
+
+/**
+ * Get monthly collection report
+ */
+export async function getMonthlyCollectionReport(month: number, year: number) {
+    try {
+        const records = await prisma.playerFeeRecord.findMany({
+            where: {
+                month,
                 year,
                 isDeleted: false,
             },
-            orderBy: {
-                month: 'asc',
+            include: {
+                payments: true,
+                player: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
             },
         });
 
-        // Create a map for quick lookup
-        const feeMap: Record<number, any> = {};
-        fees.forEach((fee: any) => {
-            feeMap[fee.month] = fee;
-        });
+        const totalDue = records.reduce((sum, record) => sum + record.amount, 0);
+        const totalPaid = records.reduce((sum, record) => sum + record.paidAmount, 0);
+        const totalPending = totalDue - totalPaid;
 
-        // Return all 12 months with status
-        const monthlyFees = [];
-        for (let month = 1; month <= 12; month++) {
-            const fee = feeMap[month];
-            monthlyFees.push({
-                month,
-                status: fee?.status || 'UNPAID',
-                amount: fee?.amount,
-                paidAt: fee?.paidAt,
-                paidAmount: fee?.paidAmount,
-                feeId: fee?.id,
-            });
-        }
+        const byStatus = {
+            paid: records.filter(r => r.status === FeeStatus.PAID).length,
+            partial: records.filter(r => r.status === FeeStatus.PARTIAL).length,
+            unpaid: records.filter(r => r.status === FeeStatus.UNPAID).length,
+            overdue: records.filter(r => r.status === FeeStatus.OVERDUE).length,
+        };
 
-        return monthlyFees;
-    } catch (error: any) {
-        console.error('❌ [FEE] Error fetching student fees:', error);
-        return [];
+        return {
+            month,
+            year,
+            totalRecords: records.length,
+            totalDue,
+            totalPaid,
+            totalPending,
+            byStatus,
+            records,
+        };
+    } catch (error) {
+        console.error("[GET_MONTHLY_COLLECTION_REPORT] Error:", error);
+        return null;
     }
 }

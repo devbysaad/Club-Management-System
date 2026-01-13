@@ -6,9 +6,9 @@ import DeleteAdmissionButton from "@/components/DeleteAdmissionButton";
 
 const AdminAdmissionsPage = async () => {
     const user = await currentUser();
-    const role = user?.publicMetadata?.role;
+    const role = (user?.publicMetadata?.role as string)?.toLowerCase();
 
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "staff") {
         redirect("/admin");
     }
 
