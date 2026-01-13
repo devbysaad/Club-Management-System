@@ -1,6 +1,7 @@
 'use client';
 
-import { markFeeAsPaid } from '@/lib/fee-actions';
+// TODO: Implement markFeeAsPaid in fee-actions.ts
+// import { markFeeAsPaid } from '@/lib/fee-actions';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -48,13 +49,15 @@ const FeePaymentCalendar = ({
         formData.append('sendEmail', sendEmail.toString());
 
         try {
-            const result = await markFeeAsPaid(formData);
+            // TODO: Implement this function
+            toast.info('Fee payment calendar feature is coming soon. Use the fee collection page instead.');
 
-            if (result.success) {
-                toast.success(result.message);
-            } else {
-                toast.error(result.message);
-            }
+            // const result = await markFeeAsPaid(formData);
+            // if (result.success) {
+            //     toast.success(result.message);
+            // } else {
+            //     toast.error(result.message);
+            // }
         } catch (error: any) {
             toast.error('Failed to mark fee as paid');
             console.error(error);
