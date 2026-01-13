@@ -71,7 +71,10 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
             return;
         }
 
-        // For other status changes (PENDING, UNDER_REVIEW)
+        // For other status changes (PENDING, UNDER_REVIEW only)
+        // CONVERTED can only be set via approveAdmission workflow
+        if (newStatus === "CONVERTED") return;
+
         setLoading(true);
         console.log("[AdmissionStatusSelector] Updating status to:", newStatus);
         const result = await updateAdmissionStatus(admissionId, newStatus);
