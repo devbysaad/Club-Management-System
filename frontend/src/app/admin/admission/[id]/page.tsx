@@ -47,9 +47,9 @@ const AdmissionDetailPage = async ({ params }: { params: { id: string } }) => {
                         </p>
                     </div>
                     <span className={`px-4 py-2 rounded-full text-sm font-medium self-start ${admission.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
-                            admission.status === 'REVIEWING' ? 'bg-fcBlue/20 text-fcBlue' :
-                                admission.status === 'ACCEPTED' ? 'bg-fcGreen/20 text-fcGreen' :
-                                    'bg-fcGarnet/20 text-fcGarnet'
+                        admission.status === 'UNDER_REVIEW' ? 'bg-fcBlue/20 text-fcBlue' :
+                            admission.status === 'APPROVED' ? 'bg-fcGreen/20 text-fcGreen' :
+                                'bg-fcGarnet/20 text-fcGarnet'
                         }`}>
                         {admission.status}
                     </span>
