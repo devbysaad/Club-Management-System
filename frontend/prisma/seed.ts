@@ -216,136 +216,137 @@ async function main() {
         });
       }
     }
+  }
 
-    // Events
-    console.log("Creating events...");
-    for (let i = 1; i <= 5; i++) {
-      await prisma.event.create({
-        data: {
-          title: `Event ${i}`,
-          date: new Date(new Date().setDate(new Date().getDate() + i)),
-          startTime: new Date(new Date().setHours(10 + i)),
-          endTime: new Date(new Date().setHours(12 + i)),
-          venue: `Club Venue ${i}`,
-          type: "MEETING",
-        },
-      });
-    }
+  // Events
+  console.log("Creating events...");
+  for (let i = 1; i <= 5; i++) {
+    await prisma.event.create({
+      data: {
+        title: `Event ${i}`,
+        date: new Date(new Date().setDate(new Date().getDate() + i)),
+        startTime: new Date(new Date().setHours(10 + i)),
+        endTime: new Date(new Date().setHours(12 + i)),
+        venue: `Club Venue ${i}`,
+        type: "MEETING",
+      },
+    });
+  }
 
-    // Announcements
-    console.log("Creating announcements...");
-    const announcementTitles = [
-      "Team Training Schedule Update",
-      "Match Day Preparation",
-      "Parent-Coach Meeting Next Week",
-      "New Equipment Available",
-      "Tournament Registration Open",
-      "End of Season Celebration",
-      "Facility Maintenance Notice",
-      "Player of the Month Awards",
-      "Uniform Collection Reminder",
-      "Club Fundraiser Event",
-    ];
+  // Announcements
+  console.log("Creating announcements...");
+  const announcementTitles = [
+    "Team Training Schedule Update",
+    "Match Day Preparation",
+    "Parent-Coach Meeting Next Week",
+    "New Equipment Available",
+    "Tournament Registration Open",
+    "End of Season Celebration",
+    "Facility Maintenance Notice",
+    "Player of the Month Awards",
+    "Uniform Collection Reminder",
+    "Club Fundraiser Event",
+  ];
 
-    const announcementContents = [
-      "Please note the updated training schedule for this week.",
-      "All players must arrive 2 hours before kickoff.",
-      "Parents are invited to discuss player progress.",
-      "New training equipment is now available in the store room.",
-      "Register your team for the upcoming regional tournament.",
-      "Join us for the end of season party and awards ceremony.",
-      "Facilities will be closed for maintenance this weekend.",
-      "Congratulations to our outstanding players this month!",
-      "Please collect your new uniforms from the office.",
-      "Support our club by participating in the upcoming fundraiser.",
-    ];
+  const announcementContents = [
+    "Please note the updated training schedule for this week.",
+    "All players must arrive 2 hours before kickoff.",
+    "Parents are invited to discuss player progress.",
+    "New training equipment is now available in the store room.",
+    "Register your team for the upcoming regional tournament.",
+    "Join us for the end of season party and awards ceremony.",
+    "Facilities will be closed for maintenance this weekend.",
+    "Congratulations to our outstanding players this month!",
+    "Please collect your new uniforms from the office.",
+    "Support our club by participating in the upcoming fundraiser.",
+  ];
 
-    const targetRolesOptions = [
-      ["ADMIN", "COACH"],
-      ["COACH", "STUDENT"],
-      ["PARENT", "STUDENT"],
-      ["ADMIN", "COACH", "PARENT"],
-      ["ADMIN"],
-      ["STUDENT"],
-      ["PARENT"],
-      ["COACH"],
-      ["ADMIN", "PARENT"],
-      ["COACH", "PARENT", "STUDENT"],
-    ];
+  const targetRolesOptions = [
+    ["ADMIN", "COACH"],
+    ["COACH", "STUDENT"],
+    ["PARENT", "STUDENT"],
+    ["ADMIN", "COACH", "PARENT"],
+    ["ADMIN"],
+    ["STUDENT"],
+    ["PARENT"],
+    ["COACH"],
+    ["ADMIN", "PARENT"],
+    ["COACH", "PARENT", "STUDENT"],
+  ];
 
-    for (let i = 0; i < 10; i++) {
-      const publishDate = new Date();
-      publishDate.setDate(publishDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
+  for (let i = 0; i < 10; i++) {
+    const publishDate = new Date();
+    publishDate.setDate(publishDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
 
-      const expiresDate = new Date(publishDate);
-      expiresDate.setDate(expiresDate.getDate() + 30 + Math.floor(Math.random() * 30)); // Expires 30-60 days after publish
+    const expiresDate = new Date(publishDate);
+    expiresDate.setDate(expiresDate.getDate() + 30 + Math.floor(Math.random() * 30)); // Expires 30-60 days after publish
 
-      await prisma.announcement.create({
-        data: {
-          title: announcementTitles[i],
-          content: announcementContents[i],
-          priority: Math.floor(Math.random() * 3) + 1, // Priority 1-3
-          targetRoles: targetRolesOptions[i] as any,
-          publishedAt: publishDate,
-          expiresAt: i % 3 === 0 ? expiresDate : null, // Some don't expire
-        },
-      });
-    }
+    await prisma.announcement.create({
+      data: {
+        title: announcementTitles[i],
+        content: announcementContents[i],
+        priority: Math.floor(Math.random() * 3) + 1, // Priority 1-3
+        targetRoles: targetRolesOptions[i] as any,
+        publishedAt: publishDate,
+        expiresAt: i % 3 === 0 ? expiresDate : null, // Some don't expire
+      },
+    });
+  }
 
-    // Jersey Orders
-    console.log("Creating jersey orders...");
-    const orderStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
-    const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
-    const sockSizes = ["S", "M", "L"];
-    const jerseyNames = ["SMITH", "JOHNSON", "WILLIAMS", "BROWN", "JONES", "GARCIA", "MILLER", "DAVIS"];
+  // Jersey Orders
+  console.log("Creating jersey orders...");
+  const orderStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+  const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  const sockSizes = ["S", "M", "L"];
+  const jerseyNames = ["SMITH", "JOHNSON", "WILLIAMS", "BROWN", "JONES", "GARCIA", "MILLER", "DAVIS"];
 
-    // Create some orders from different users (admins, parents, students)
-    const allUsers = [
-      { userId: "user_2abc123", name: "John Smith", email: "john.smith@example.com", phone: "555-1234" },
-      { userId: "user_2def456", name: "Sarah Johnson", email: "sarah.j@example.com", phone: "555-5678" },
-      ...parents.slice(0, 5).map((p, i) => ({
-        userId: `user_parent_${i}`,
-        name: `${p.firstName} ${p.lastName}`,
-        email: p.email || `${p.firstName.toLowerCase()}@club.com`,
-        phone: p.phone || "555-0000"
-      })),
-      ...players.slice(0, 3).map((p, i) => ({
-        userId: `user_player_${i}`,
-        name: `${p.firstName} ${p.lastName}`,
-        email: p.email || `${p.firstName.toLowerCase()}@club.com`,
-        phone: "555-9999"
-      }))
-    ];
+  // Create some orders from different users (admins, parents, students)
+  const allUsers = [
+    { userId: "user_2abc123", name: "John Smith", email: "john.smith@example.com", phone: "555-1234" },
+    { userId: "user_2def456", name: "Sarah Johnson", email: "sarah.j@example.com", phone: "555-5678" },
+    ...parents.slice(0, 5).map((p, i) => ({
+      userId: `user_parent_${i}`,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
+      phone: p.phone || "555-0000"
+    })),
+    ...players.slice(0, 3).map((p, i) => ({
+      userId: `user_player_${i}`,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
+      phone: "555-9999"
+    }))
+  ];
 
-    for (let i = 0; i < 12; i++) {
-      const user = allUsers[i % allUsers.length];
-      const hasCustomMeasurements = i % 3 === 0; // Every 3rd order has custom measurements
+  for (let i = 0; i < 12; i++) {
+    const user = allUsers[i % allUsers.length];
+    const hasCustomMeasurements = i % 3 === 0; // Every 3rd order has custom measurements
 
-      const orderDate = new Date();
-      orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
+    const orderDate = new Date();
+    orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
 
-      await prisma.order.create({
-        data: {
-          userId: user.userId,
-          customerName: user.name,
-          contactNumber: user.phone,
-          email: user.email,
-          shirtSize: sizes[Math.floor(Math.random() * sizes.length)],
-          shortsSize: sizes[Math.floor(Math.random() * sizes.length)],
-          socksSize: sockSizes[Math.floor(Math.random() * sockSizes.length)],
-          jerseyName: jerseyNames[i % jerseyNames.length],
-          jerseyNumber: Math.floor(Math.random() * 99) + 1,
-          customLength: hasCustomMeasurements ? `${65 + Math.floor(Math.random() * 20)}` : null,
-          customWidth: hasCustomMeasurements ? `${45 + Math.floor(Math.random() * 15)}` : null,
-          customNotes: hasCustomMeasurements ? "Please ensure sleeves are slightly longer. Athletic fit preferred." : null,
-          status: orderStatuses[i % orderStatuses.length] as any,
-          createdAt: orderDate,
-        },
-      });
-    }
+    await prisma.order.create({
+      data: {
+        userId: user.userId,
+        customerName: user.name,
+        contactNumber: user.phone,
+        email: user.email,
+        shirtSize: sizes[Math.floor(Math.random() * sizes.length)],
+        shortsSize: sizes[Math.floor(Math.random() * sizes.length)],
+        socksSize: sockSizes[Math.floor(Math.random() * sockSizes.length)],
+        jerseyName: jerseyNames[i % jerseyNames.length],
+        jerseyNumber: Math.floor(Math.random() * 99) + 1,
+        customLength: hasCustomMeasurements ? `${65 + Math.floor(Math.random() * 20)}` : null,
+        customWidth: hasCustomMeasurements ? `${45 + Math.floor(Math.random() * 15)}` : null,
+        customNotes: hasCustomMeasurements ? "Please ensure sleeves are slightly longer. Athletic fit preferred." : null,
+        status: orderStatuses[i % orderStatuses.length] as any,
+        createdAt: orderDate,
+      },
+    });
+  }
 
-    console.log("✅ Football club seeding completed successfully!");
-    console.log(`
+  console.log("✅ Football club seeding completed successfully!");
+  console.log(`
 📊 Summary:
 - Admins: 2
 - Coaches: ${numberOfCoaches}
@@ -358,12 +359,12 @@ async function main() {
 - Announcements: 10
 - Jersey Orders: 12
   `);
-  }
+}
 
-  main()
-    .then(() => prisma.$disconnect())
-    .catch(async (e) => {
-      console.error("❌ Seeding failed:", e);
-      await prisma.$disconnect();
-      process.exit(1);
-    });
+main()
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => {
+    console.error("❌ Seeding failed:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
