@@ -149,7 +149,7 @@ export default async function FeeCollectionPage({
                             {players.map((player) => {
                                 const feeRecord = player.feeRecords[0];
                                 const feeAmount = feeRecord?.amount || 0;
-                                const status = feeRecord?.status || "NO_RECORD";
+                                const status = (feeRecord?.status as string) || "NO_RECORD";
 
                                 return (
                                     <tr

@@ -147,4 +147,8 @@ The **Pato Hornets Club Management System** is designed to provide a centralized
 - **Club:** Pato Hornets Football Club
 
 ---
+<<<<<<< HEAD
 *Built with ❤️ for the Pato Hornets Community.*
+=======
+*Built with ❤️ for the Pato Hornets Community.*
+>>>>>>> ce07d20ecd577a40a6315b2246e90456bce80117

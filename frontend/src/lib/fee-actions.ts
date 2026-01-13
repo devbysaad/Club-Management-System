@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 type ActionResult = {
     success: boolean;
     error: boolean;
-    message: string;
+    message?: string;
     data?: any;
 };
 
