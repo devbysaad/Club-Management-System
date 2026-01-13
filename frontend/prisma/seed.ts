@@ -19,7 +19,7 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.announcement.deleteMany();
   await prisma.order.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.appUser.deleteMany();
 
   console.log("✅ Database cleared!");
   console.log("🌱 Starting to seed...");
@@ -28,7 +28,7 @@ async function main() {
   // Admins
   console.log("Creating admins...");
   for (let i = 1; i <= 2; i++) {
-    await prisma.user.create({
+    await prisma.appUser.create({
       data: {
         email: `admin${i}@club.com`,
         password: `admin${i}pass`,
@@ -51,7 +51,7 @@ async function main() {
   const numberOfCoaches = Math.floor(Math.random() * 11) + 5; // Random 5–15
   for (let i = 1; i <= numberOfCoaches; i++) {
     const suffix = Math.floor(Math.random() * 10000); // Unique email
-    const coachUser = await prisma.user.create({
+    const coachUser = await prisma.appUser.create({
       data: {
         email: `coach${i}_${suffix}@club.com`,
         password: `coach${i}pass`,
@@ -105,7 +105,7 @@ async function main() {
   console.log("Creating parents...");
   const parents = [];
   for (let i = 1; i <= 25; i++) {
-    const parentUser = await prisma.user.create({
+    const parentUser = await prisma.appUser.create({
       data: {
         email: `parent${i}@club.com`,
         password: `parent${i}pass`,
@@ -149,7 +149,7 @@ async function main() {
     const birthDay = Math.floor(Math.random() * 28) + 1; // Random day (1-28 to avoid month issues)
     const dateOfBirth = new Date(birthYear, birthMonth, birthDay);
 
-    const playerUser = await prisma.user.create({
+    const playerUser = await prisma.appUser.create({
       data: {
         email: `player${i}_${suffix}@club.com`,
         password: `player${i}pass`,
