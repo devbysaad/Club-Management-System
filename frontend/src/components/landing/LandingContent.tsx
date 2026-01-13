@@ -155,10 +155,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                 <div className="max-w-7xl mx-auto">
                     <div className="grid md:grid-cols-2 gap-12 items-center">
                         <div>
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rmBlue/10 border border-rmBlue/20 mb-6">
-                                <span className="w-2 h-2 bg-rmBlue rounded-full animate-pulse"></span>
-                                <span className="text-sm font-medium text-rmBlue">Elite Football Training Since 2015</span>
-                            </div>
+
 
                             <h1 className="text-5xl md:text-6xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
                                 Build Your<br />
@@ -258,7 +255,7 @@ const LandingContent = ({ data }: { data: LandingData | null }) => {
                                 </div>
                                 <h3 className="font-bold text-xl text-[var(--text-primary)] mb-1">{coach.name}</h3>
                                 <p className="text-rmBlue text-sm font-semibold mb-2">{coach.role}</p>
-                                <p className="text-[var(--text-muted)] text-sm">{coach.exp} Experience</p>
+                                <p className="text-[var(--text-muted)] text-sm">10+ Experience</p>
                             </div>
                         ))}
                     </div>

@@ -262,6 +262,97 @@ export async function deleteFeeRecord(feeRecordId: string): Promise<ActionResult
     });
 }
 
+/**
+ * Create a fee record for an individual player (Admin/Staff)
+ */
+export async function createFeeRecordForPlayer(data: {
+    playerId: string;
+    feePlanId: string;
+    month: number;
+    year: number;
+}): Promise<ActionResult> {
+    return withRole([Role.ADMIN, Role.STAFF], async (user) => {
+        try {
+            // Get the fee plan
+            const feePlan = await prisma.feePlan.findUnique({
+                where: { id: data.feePlanId },
+            });
+
+            if (!feePlan) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "Fee plan not found",
+                };
+            }
+
+            // Check if record already exists
+            const existing = await prisma.playerFeeRecord.findUnique({
+                where: {
+                    playerId_feePlanId_month_year: {
+                        playerId: data.playerId,
+                        feePlanId: data.feePlanId,
+                        month: data.month,
+                        year: data.year,
+                    },
+                },
+            });
+
+            if (existing && !existing.isDeleted) {
+                return {
+                    success: false,
+                    error: true,
+                    message: "Fee record already exists for this player, plan, and month",
+                };
+            }
+
+            // Create or restore the fee record
+            if (existing && existing.isDeleted) {
+                // Restore the deleted record
+                await prisma.playerFeeRecord.update({
+                    where: { id: existing.id },
+                    data: {
+                        isDeleted: false,
+                        deletedAt: null,
+                        amount: feePlan.amount,
+                        status: FeeStatus.UNPAID,
+                        paidAmount: 0,
+                    },
+                });
+            } else {
+                // Create new record
+                await prisma.playerFeeRecord.create({
+                    data: {
+                        playerId: data.playerId,
+                        feePlanId: data.feePlanId,
+                        month: data.month,
+                        year: data.year,
+                        amount: feePlan.amount,
+                        dueDate: new Date(data.year, data.month - 1, 5), // 5th of each month
+                        status: FeeStatus.UNPAID,
+                    },
+                });
+            }
+
+            revalidatePath("/admin/fees/collect");
+            revalidatePath("/admin/fees");
+            revalidatePath("/list/students");
+
+            return {
+                success: true,
+                error: false,
+                message: "Fee record created successfully",
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: true,
+                message: error.message || "Failed to create fee record",
+            };
+        }
+    });
+}
+
 // ============================================
 // PAYMENT MANAGEMENT
 // ============================================

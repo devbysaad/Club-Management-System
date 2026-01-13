@@ -46,6 +46,17 @@ export default async function FeeCollectionPage({
         },
     });
 
+    // Fetch active fee plans
+    const feePlans = await prisma.feePlan.findMany({
+        where: { isActive: true },
+        select: {
+            id: true,
+            name: true,
+            amount: true,
+        },
+        orderBy: { createdAt: "desc" },
+    });
+
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -200,6 +211,7 @@ export default async function FeeCollectionPage({
                                                     feeAmount={feeAmount}
                                                     month={selectedMonth}
                                                     year={selectedYear}
+                                                    feePlans={feePlans}
                                                 />
                                             </div>
                                         </td>

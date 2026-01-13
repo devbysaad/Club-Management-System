@@ -898,3 +898,32 @@ model MonthlyFee {
   @@index([month, year])
   @@index([isDeleted])
 }
+
+// ============================================
+// EMAIL LOGS
+// ============================================
+model EmailLog {
+  id        String   @id @default(uuid())
+  type      String   // "announcement", "news", "attendance", "fee", "admission", "order"
+  recipient String   // email address
+  subject   String
+  body      String   @db.Text
+  status    EmailStatus @default(PENDING)
+  error     String?  @db.Text
+  retryCount Int     @default(0)
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([recipient])
+  @@index([sentAt])
+  @@index([createdAt])
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}

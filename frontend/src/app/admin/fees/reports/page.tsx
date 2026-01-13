@@ -22,7 +22,7 @@ export default async function FeeReportsPage() {
             isDeleted: false,
         },
         include: {
-            student: {
+            player: {
                 select: {
                     firstName: true,
                     lastName: true,
@@ -34,7 +34,7 @@ export default async function FeeReportsPage() {
         },
         orderBy: [
             { month: "desc" },
-            { student: { firstName: "asc" } },
+            { player: { firstName: "asc" } },
         ],
     });
 
@@ -213,9 +213,9 @@ export default async function FeeReportsPage() {
                                         >
                                             <td className="py-3 px-4">
                                                 <p className="font-medium text-[var(--text-primary)]">
-                                                    {record.student.firstName} {record.student.lastName}
+                                                    {record.player.firstName} {record.player.lastName}
                                                 </p>
-                                                <p className="text-xs text-[var(--text-muted)]">{record.student.email}</p>
+                                                <p className="text-xs text-[var(--text-muted)]">{record.player.email}</p>
                                             </td>
                                             <td className="py-3 px-4 text-center text-[var(--text-muted)]">
                                                 {new Date(record.year, record.month - 1).toLocaleDateString("en-US", {
