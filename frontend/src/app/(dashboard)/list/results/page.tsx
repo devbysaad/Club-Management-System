@@ -2,8 +2,8 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { resultsData, role } from "@/lib/data";
 import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 
 type MatchResult = {
   id: number;
@@ -44,7 +44,14 @@ const columns = [
 const opponents = ["Real Madrid", "Atletico Madrid", "Sevilla FC", "Valencia CF", "Real Betis", "Athletic Bilbao", "Real Sociedad", "Villarreal CF", "Celta Vigo", "Getafe CF"];
 const competitions = ["La Liga", "Champions League", "Copa del Rey", "Supercopa"];
 
-const MatchResultListPage = () => {
+const MatchResultListPage = async () => {
+  // Get user role from Clerk session claims
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  // TODO: Replace with real Prisma query for match results
+  const resultsData: MatchResult[] = [];
+
   const renderRow = (item: MatchResult, index: number) => {
     const opponent = opponents[index % opponents.length];
     const competition = competitions[index % competitions.length];
@@ -82,8 +89,8 @@ const MatchResultListPage = () => {
         </td>
         <td className="hidden md:table-cell">
           <span className={`px-2 py-1 rounded-lg text-xs font-medium ${competition === "Champions League" ? "bg-fcGold/20 text-fcGold" :
-              competition === "La Liga" ? "bg-fcGarnet/20 text-fcGarnet" :
-                "bg-fcBlue/20 text-fcBlue"
+            competition === "La Liga" ? "bg-fcGarnet/20 text-fcGarnet" :
+              "bg-fcBlue/20 text-fcBlue"
             }`}>
             {competition}
           </span>
@@ -141,7 +148,7 @@ const MatchResultListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={(item) => renderRow(item, resultsData.indexOf(item))} data={resultsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={1} />
     </div>
   );
 };

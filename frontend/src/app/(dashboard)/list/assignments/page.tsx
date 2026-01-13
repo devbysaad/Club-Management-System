@@ -2,7 +2,6 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { assignmentsData } from "@/lib/data";
 import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 
@@ -69,6 +68,9 @@ const PlayerStatsListPage = async () => {
   // Get user role from Clerk session claims
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+  // TODO: Replace with real Prisma query
+  const assignmentsData: PlayerStat[] = [];
 
   const renderRow = (item: PlayerStat) => {
     const stat = statCategories[item.subject] || { name: item.subject, icon: "📊", color: "bg-fcSurface" };
@@ -139,7 +141,7 @@ const PlayerStatsListPage = async () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={assignmentsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination totalPages={1} />
     </div>
   );
 };
