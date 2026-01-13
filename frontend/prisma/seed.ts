@@ -200,27 +200,7 @@ async function main() {
     trainingSessions.push(session);
   }
 
-  // Fixtures
-  console.log("Creating fixtures...");
-  const fixtures = [];
-  for (let i = 1; i <= 10; i++) {
-    const fixtureDate = new Date();
-    fixtureDate.setDate(fixtureDate.getDate() + i);
-    const fixture = await prisma.fixture.create({
-      data: {
-        title: `Fixture ${i}`,
-        opponent: `Team ${i}`,
-        date: fixtureDate,
-        time: new Date(new Date().setHours(15 + i % 3)),
-        venue: `Stadium ${i}`,
-        isHome: i % 2 === 0,
-        type: "LEAGUE",
-        ageGroupId: ageGroups[i % ageGroups.length].id,
-      },
-    });
-    fixtures.push(fixture);
-  }
-
+ 
   // Attendances
   console.log("Creating attendance records...");
   for (const session of trainingSessions) {
@@ -238,24 +218,7 @@ async function main() {
     }
   }
 
-  // Results
-  console.log("Creating match results...");
-  for (const fixture of fixtures) {
-    for (const player of players) {
-      if (player.ageGroupId === fixture.ageGroupId) {
-        await prisma.result.create({
-          data: {
-            studentId: player.id,
-            fixtureId: fixture.id,
-            goals: Math.floor(Math.random() * 3),
-            assists: Math.floor(Math.random() * 2),
-            rating: Math.random() * 10,
-            minutesPlayed: 90,
-          },
-        });
-      }
-    }
-  }
+  s
 
   // Events
   console.log("Creating events...");

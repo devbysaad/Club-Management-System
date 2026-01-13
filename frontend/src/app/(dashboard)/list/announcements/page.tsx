@@ -188,7 +188,7 @@ const AnnouncementListPage = async ({
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
       {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <Pagination totalPages={Math.ceil(count / ITEM_PER_PAGE)} />
     </div>
   );
 };
