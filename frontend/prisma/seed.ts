@@ -25,13 +25,15 @@ async function main() {
   console.log("🌱 Starting to seed...");
 
   // ======== USERS ========
+  // NOTE: In production, users must be created via Clerk, not seed
+  // This seed is for development only
   // Admins
   console.log("Creating admins...");
   for (let i = 1; i <= 2; i++) {
     await prisma.appUser.create({
       data: {
+        id: `user_admin_${i}`, // Mock Clerk ID for development
         email: `admin${i}@club.com`,
-        password: `admin${i}pass`,
         role: "ADMIN",
         admin: {
           create: {
@@ -53,8 +55,8 @@ async function main() {
     const suffix = Math.floor(Math.random() * 10000); // Unique email
     const coachUser = await prisma.appUser.create({
       data: {
+        id: `user_coach_${i}_${suffix}`, // Mock Clerk ID
         email: `coach${i}_${suffix}@club.com`,
-        password: `coach${i}pass`,
         role: "COACH",
         coach: {
           create: {
@@ -107,8 +109,8 @@ async function main() {
   for (let i = 1; i <= 25; i++) {
     const parentUser = await prisma.appUser.create({
       data: {
+        id: `user_parent_${i}`, // Mock Clerk ID
         email: `parent${i}@club.com`,
-        password: `parent${i}pass`,
         role: "PARENT",
         parent: {
           create: {
@@ -151,8 +153,8 @@ async function main() {
 
     const playerUser = await prisma.appUser.create({
       data: {
+        id: `user_player_${i}_${suffix}`, // Mock Clerk ID
         email: `player${i}_${suffix}@club.com`,
-        password: `player${i}pass`,
         role: "STUDENT",
         student: {
           create: {
@@ -186,7 +188,7 @@ async function main() {
       data: {
         title: `Training ${i}`,
         date,
-        dayOfWeek: daysOfWeek[i % 7],
+        dayOfWeek: daysOfWeek[i % 7] as any,
         startTime: new Date(new Date().setHours(10 + i % 3)),
         endTime: new Date(new Date().setHours(12 + i % 3)),
         venue: `Field ${i}`,
@@ -323,7 +325,7 @@ async function main() {
         title: announcementTitles[i],
         content: announcementContents[i],
         priority: Math.floor(Math.random() * 3) + 1, // Priority 1-3
-        targetRoles: targetRolesOptions[i],
+        targetRoles: targetRolesOptions[i] as any,
         publishedAt: publishDate,
         expiresAt: i % 3 === 0 ? expiresDate : null, // Some don't expire
       },
@@ -376,7 +378,7 @@ async function main() {
         customLength: hasCustomMeasurements ? `${65 + Math.floor(Math.random() * 20)}` : null,
         customWidth: hasCustomMeasurements ? `${45 + Math.floor(Math.random() * 15)}` : null,
         customNotes: hasCustomMeasurements ? "Please ensure sleeves are slightly longer. Athletic fit preferred." : null,
-        status: orderStatuses[i % orderStatuses.length],
+        status: orderStatuses[i % orderStatuses.length] as any,
         createdAt: orderDate,
       },
     });
