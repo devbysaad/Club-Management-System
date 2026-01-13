@@ -124,7 +124,7 @@ export default async function FeeCollectionPage({
                             <p className="text-sm text-[var(--text-muted)]">
                                 No fee records have been generated for {monthNames[selectedMonth - 1]} {selectedYear}.
                                 Go to <Link href="/admin/fees" className="text-fcBlue hover:underline">Fee Management</Link> and click
-                                "Generate Fee Records" to create records for all players.
+                                &quot;Generate Fee Records&quot; to create records for all players.
                             </p>
                         </div>
                     </div>

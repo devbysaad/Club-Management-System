@@ -55,7 +55,7 @@ const SingleStudentPage = async ({
           <h1 className="text-2xl font-heading font-bold text-white mb-2">
             Student Not Found
           </h1>
-          <p className="text-fcTextMuted">The student you're looking for doesn't exist.</p>
+          <p className="text-fcTextMuted">The student you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </div>
     );
@@ -236,16 +236,16 @@ const SingleStudentPage = async ({
 
             {/* Fee Status Card */}
             <div className={`glass-card rounded-xl p-4 flex flex-col gap-3 ${currentMonthFee?.status === "PAID"
-                ? "bg-fcGreen/10 border-2 border-fcGreen/30"
-                : currentMonthFee?.status === "PARTIAL"
-                  ? "bg-fcGold/10 border-2 border-fcGold/30"
-                  : "bg-fcGarnet/10 border-2 border-fcGarnet/30"
+              ? "bg-fcGreen/10 border-2 border-fcGreen/30"
+              : currentMonthFee?.status === "PARTIAL"
+                ? "bg-fcGold/10 border-2 border-fcGold/30"
+                : "bg-fcGarnet/10 border-2 border-fcGarnet/30"
               }`}>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentMonthFee?.status === "PAID"
-                  ? "bg-fcGreen/20"
-                  : currentMonthFee?.status === "PARTIAL"
-                    ? "bg-fcGold/20"
-                    : "bg-fcGarnet/20"
+                ? "bg-fcGreen/20"
+                : currentMonthFee?.status === "PARTIAL"
+                  ? "bg-fcGold/20"
+                  : "bg-fcGarnet/20"
                 }`}>
                 <span className="text-xl">
                   {currentMonthFee?.status === "PAID" ? "✓" : "💰"}
@@ -253,10 +253,10 @@ const SingleStudentPage = async ({
               </div>
               <div>
                 <h1 className={`text-lg font-heading font-bold ${currentMonthFee?.status === "PAID"
-                    ? "text-fcGreen"
-                    : currentMonthFee?.status === "PARTIAL"
-                      ? "text-fcGold"
-                      : "text-fcGarnet"
+                  ? "text-fcGreen"
+                  : currentMonthFee?.status === "PARTIAL"
+                    ? "text-fcGold"
+                    : "text-fcGarnet"
                   }`}>
                   {currentMonthFee?.status === "PAID"
                     ? "Paid"
@@ -277,7 +277,7 @@ const SingleStudentPage = async ({
         {/* BOTTOM - SCHEDULE */}
         <div className="mt-4 glass-card rounded-2xl p-6 h-[800px]">
           <h1 className="text-xl font-heading font-bold text-white mb-4">
-            Student's Schedule
+            Student&apos;s Schedule
           </h1>
           <BigCalendarContainer type="classId" id={ageGroupId} />
         </div>

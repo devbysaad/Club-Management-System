@@ -110,7 +110,7 @@ const menuItems = [
         visible: ["admin", "staff"],
       },
       {
-        icon: "/announcement.png",          
+        icon: "/announcement.png",
         label: "Admissions",
         href: "/admin/admission",
         visible: ["admin", "staff"],
@@ -182,7 +182,7 @@ const Menu = () => {
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
           <p className="text-red-500 text-sm font-medium mb-2">⚠️ No Role Assigned</p>
           <p className="text-xs text-[var(--text-muted)]">
-            Please set your role in Clerk Dashboard → Users → Public Metadata → Add "role":"admin"
+            Please set your role in Clerk Dashboard → Users → Public Metadata → Add &quot;role&quot;:&quot;admin&quot;
           </p>
         </div>
       </div>

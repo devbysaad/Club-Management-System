@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import FeeGrid from "./FeeGrid";
 import { getPlayerFeeRecords } from "@/lib/fee-actions";
 
@@ -13,7 +13,7 @@ export default function FeeGridWrapper({ playerId, year }: FeeGridWrapperProps) 
     const [feeRecords, setFeeRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchFees = async () => {
+    const fetchFees = useCallback(async () => {
         setLoading(true);
         try {
             const records = await getPlayerFeeRecords(playerId, year);
@@ -23,11 +23,11 @@ export default function FeeGridWrapper({ playerId, year }: FeeGridWrapperProps) 
         } finally {
             setLoading(false);
         }
-    };
+    }, [playerId, year]);
 
     useEffect(() => {
         fetchFees();
-    }, [playerId, year]);
+    }, [fetchFees]);
 
     if (loading) {
         return (

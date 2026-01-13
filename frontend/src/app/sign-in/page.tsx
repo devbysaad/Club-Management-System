@@ -146,7 +146,7 @@ const LoginPage = () => {
                             {/* Footer */}
                             <div className="mt-8 text-center">
                                 <p className="text-sm text-[var(--text-secondary)]">
-                                    Don't have an account?{" "}
+                                    Don&apos;t have an account?{" "}
                                     <a href="#" className="text-rmBlue font-semibold hover:text-rmBlueDark">
                                         Contact admin
                                     </a>

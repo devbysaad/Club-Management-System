@@ -33,7 +33,7 @@ const SingleParentPage = async ({
           <h1 className="text-2xl font-heading font-bold text-white mb-2">
             Parent Not Found
           </h1>
-          <p className="text-fcTextMuted">The parent you're looking for doesn't exist.</p>
+          <p className="text-fcTextMuted">The parent you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </div>
     );
@@ -117,7 +117,7 @@ const SingleParentPage = async ({
           {/* CHILDREN CARDS */}
           <div className="flex-1 flex flex-col gap-4">
             <h2 className="text-lg font-heading font-bold text-white">Children</h2>
-            
+
             {parent.students.length === 0 ? (
               <div className="glass-card rounded-xl p-6 text-center">
                 <p className="text-fcTextMuted">No children registered</p>
@@ -166,7 +166,7 @@ const SingleParentPage = async ({
           <h1 className="text-xl font-heading font-bold text-white mb-4">
             Contact Information
           </h1>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="glass-card rounded-xl p-4">
               <div className="flex items-center gap-3 mb-2">
@@ -247,7 +247,7 @@ const SingleParentPage = async ({
 
         {/* PERFORMANCE */}
         <Performance />
-        
+
         {/* ANNOUNCEMENTS */}
         <Announcements />
       </div>
