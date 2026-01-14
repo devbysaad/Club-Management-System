@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // INSTRUCTION: Save this as src/app/(dashboard)/list/sessions/page.tsx
 // Replace your existing sessions page with this
 

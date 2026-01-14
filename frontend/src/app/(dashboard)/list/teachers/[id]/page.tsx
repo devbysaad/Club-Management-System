@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // src/app/(dashboard)/list/teachers/[id]/page.tsx
 import Announcements from "@/components/Announcements";
 import BigCalendarContainer from "@/components/BigCalendarContainer";

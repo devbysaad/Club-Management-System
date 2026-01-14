@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // INSTRUCTION: Replace src/app/(dashboard)/list/teachers/page.tsx with this
 
 import FormModal from "@/components/FormModal";

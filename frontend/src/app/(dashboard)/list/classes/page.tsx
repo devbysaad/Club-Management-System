@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // INSTRUCTION: Save this as src/app/(dashboard)/list/classes/page.tsx
 
 import FormModal from "@/components/FormModal";

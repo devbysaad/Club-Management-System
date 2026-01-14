@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Announcements from "@/components/Announcements";
 import { role } from "@/lib/data";
 import prisma from "@/lib/prisma";

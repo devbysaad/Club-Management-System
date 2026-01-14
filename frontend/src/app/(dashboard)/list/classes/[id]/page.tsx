@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // INSTRUCTION: Save this as src/app/(dashboard)/list/classes/[id]/page.tsx
 
 import Table from "@/components/Table";
@@ -145,7 +147,7 @@ const TeamDetailPage = async ({ params }: { params: { id: string } }) => {
     return age;
   };
 
- 
+
   // Transform data for rendering
   const playersData: Player[] = ageGroup.students.map((student) => ({
     id: student.id,
@@ -265,7 +267,7 @@ const TeamDetailPage = async ({ params }: { params: { id: string } }) => {
             </p>
           </div>
         </div>
-        
+
         {playersData.length > 0 ? (
           <Table columns={columns} renderRow={renderRow} data={playersData} />
         ) : (

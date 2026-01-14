@@ -8,12 +8,12 @@ import { Role } from "@prisma/client";
 import { getCurrentUser } from "../action-helpers";
 
 /**
- * Require admin permission - throws if not admin
+ * Require admin permission - returns null if not admin
  */
 export async function requireAdmin() {
     const user = await getCurrentUser();
     if (!user || user.role !== Role.ADMIN) {
-        throw new Error("Unauthorized: Admin access required");
+        return null; // Return null instead of throwing
     }
     return user;
 }
@@ -24,7 +24,7 @@ export async function requireAdmin() {
 export async function requireStaffOrAdmin() {
     const user = await getCurrentUser();
     if (!user || (user.role !== Role.ADMIN && user.role !== Role.COACH)) {
-        throw new Error("Unauthorized: Staff or admin access required");
+        return null; // Return null instead of throwing
     }
     return user;
 }

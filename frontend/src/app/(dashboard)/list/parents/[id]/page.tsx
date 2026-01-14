@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // INSTRUCTION: Create src/app/(dashboard)/list/parents/[id]/page.tsx
 
 import Announcements from "@/components/Announcements";
