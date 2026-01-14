@@ -8,11 +8,14 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
 
-# Copy the rest of the application code
-COPY frontend/ .
+# Copy Prisma schema first for better caching
+COPY frontend/prisma ./prisma
 
 # Generate Prisma Client
 RUN npx prisma generate
+
+# Copy the rest of the application code
+COPY frontend/ .
 
 # Build the Next.js application
 RUN npm run build
@@ -29,6 +32,7 @@ COPY --from=base /app/public ./public
 COPY --from=base /app/.next ./.next
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/package.json ./package.json
+COPY --from=base /app/prisma ./prisma
 
 # Expose the port
 EXPOSE 3000

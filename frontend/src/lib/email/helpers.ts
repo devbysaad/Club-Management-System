@@ -38,9 +38,6 @@ export async function getPlayerEmails(ageGroupId?: string): Promise<string[]> {
         where: {
             isDeleted: false,
             ...(ageGroupId ? { ageGroupId } : {}),
-            email: {
-                not: null,
-            },
         },
         select: {
             email: true,
@@ -59,9 +56,6 @@ export async function getParentEmails(): Promise<string[]> {
     const parents = await prisma.parent.findMany({
         where: {
             isDeleted: false,
-            email: {
-                not: null,
-            },
         },
         select: {
             email: true,
@@ -81,9 +75,6 @@ export async function getStaffEmails(): Promise<string[]> {
     const coaches = await prisma.coach.findMany({
         where: {
             isDeleted: false,
-            email: {
-                not: null,
-            },
         },
         select: {
             email: true,
@@ -95,9 +86,6 @@ export async function getStaffEmails(): Promise<string[]> {
         where: {
             role: Role.ADMIN,
             isDeleted: false,
-            email: {
-                not: null,
-            },
         },
         select: {
             email: true,
