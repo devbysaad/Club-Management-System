@@ -309,7 +309,7 @@ export const createStudent = async (
                     phone: data.phone,
                     address: data.address,
                     position: data.position,
-                    jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+                    jerseyNumber: data.jerseyNumber || null,
                     sex: data.sex,
                     bloodType: data.bloodType,
                     parentId: data.parentId,
@@ -368,7 +368,7 @@ export const updateStudent = async (
                     phone: data.phone,
                     address: data.address,
                     position: data.position,
-                    jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+                    jerseyNumber: data.jerseyNumber ? data.jerseyNumber : null,
                     sex: data.sex,
                     bloodType: data.bloodType,
                     parentId: data.parentId,
@@ -633,9 +633,9 @@ export const createAgeGroup = async (
             const ageGroup = await tx.ageGroup.create({
                 data: {
                     name: data.name,
-                    minAge: parseInt(data.minAge),
-                    maxAge: parseInt(data.maxAge),
-                    capacity: parseInt(data.capacity),
+                    minAge: data.minAge,
+                    maxAge: data.maxAge,
+                    capacity: data.capacity,
                     description: data.description,
                 },
             });
@@ -673,9 +673,9 @@ export const updateAgeGroup = async (
                 where: { id: data.id },
                 data: {
                     name: data.name,
-                    minAge: parseInt(data.minAge),
-                    maxAge: parseInt(data.maxAge),
-                    capacity: parseInt(data.capacity),
+                    minAge: data.minAge,
+                    maxAge: data.maxAge,
+                    capacity: data.capacity,
                     description: data.description,
                 },
             });
@@ -846,7 +846,7 @@ export const createAnnouncement = async (
                 data: {
                     title: data.title,
                     content: data.content,
-                    priority: parseInt(data.priority),
+                    priority: data.priority,
                     targetRoles: data.targetRoles,
                     expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
                 },
@@ -886,7 +886,7 @@ export const updateAnnouncement = async (
                 data: {
                     title: data.title,
                     content: data.content,
-                    priority: parseInt(data.priority),
+                    priority: data.priority,
                     targetRoles: data.targetRoles,
                     expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
                 },
@@ -1186,10 +1186,10 @@ export const createResult = async (
                 data: {
                     studentId: data.studentId,
                     fixtureId: data.fixtureId,
-                    goals: parseInt(data.goals),
-                    assists: parseInt(data.assists),
+                    goals: data.goals,
+                    assists: data.assists,
                     rating: parseFloat(data.rating),
-                    minutesPlayed: parseInt(data.minutesPlayed),
+                    minutesPlayed: data.minutesPlayed,
                     yellowCards: parseInt(data.yellowCards || "0"),
                     redCards: parseInt(data.redCards || "0"),
                     notes: data.notes,
@@ -1228,10 +1228,10 @@ export const updateResult = async (
             const result = await tx.result.update({
                 where: { id: data.id },
                 data: {
-                    goals: parseInt(data.goals),
-                    assists: parseInt(data.assists),
+                    goals: data.goals,
+                    assists: data.assists,
                     rating: parseFloat(data.rating),
-                    minutesPlayed: parseInt(data.minutesPlayed),
+                    minutesPlayed: data.minutesPlayed,
                     yellowCards: parseInt(data.yellowCards || "0"),
                     redCards: parseInt(data.redCards || "0"),
                     notes: data.notes,
