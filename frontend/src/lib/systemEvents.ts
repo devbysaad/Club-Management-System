@@ -81,17 +81,17 @@ async function handleAdmissionSubmitted({ admissionId }: { admissionId: string }
     }
 
     const html = templates.admissionSubmittedAdminTemplate({
-        applicantName: admission.studentName,
+        applicantName: `${admission.firstName} ${admission.lastName}`,
         email: admission.email || undefined,
         phone: admission.phone || undefined,
-        ageGroup: admission.targetAgeGroup || 'Not specified',
+        ageGroup: 'Not specified',
         submittedAt: admission.createdAt,
         admissionId,
     });
 
     return await sendEmail({
         to: adminEmails,
-        subject: `New Admission: ${admission.studentName}`,
+        subject: `New Admission: ${admission.firstName} ${admission.lastName}`,
         html,
     });
 }
@@ -110,13 +110,13 @@ async function handleAdmissionStatusUpdated({ admissionId, status }: { admission
     }
 
     const html = templates.admissionStatusTemplate({
-        applicantName: admission.studentName,
+        applicantName: `${admission.firstName} ${admission.lastName}`,
         status: status as any,
     });
 
     return await sendEmail({
         to: admission.email,
-        subject: `Admission Update - ${admission.studentName}`,
+        subject: `Admission Update - ${admission.firstName} ${admission.lastName}`,
         html,
     });
 }
