@@ -300,37 +300,45 @@ async function main() {
   const sockSizes = ["S", "M", "L"];
   const jerseyNames = ["SMITH", "JOHNSON", "WILLIAMS", "BROWN", "JONES", "GARCIA", "MILLER", "DAVIS"];
 
-  // Create some orders from different users (admins, parents, students)
-  const allUsers = [
-    { userId: "user_2abc123", name: "John Smith", email: "john.smith@example.com", phone: "555-1234" },
-    { userId: "user_2def456", name: "Sarah Johnson", email: "sarah.j@example.com", phone: "555-5678" },
-    ...parents.slice(0, 5).map((p, i) => ({
-      userId: `user_parent_${i}`,
-      name: `${p.firstName} ${p.lastName}`,
-      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
-      phone: p.phone || "555-0000"
-    })),
-    ...players.slice(0, 3).map((p, i) => ({
-      userId: `user_player_${i}`,
-      name: `${p.firstName} ${p.lastName}`,
-      email: p.email || `${p.firstName.toLowerCase()}@club.com`,
-      phone: "555-9999"
-    }))
-  ];
+  // Get actual AppUsers that were created
+  const appUsers = await prisma.appUser.findMany({
+    include: {
+      parent: true,
+      student: true,
+      admin: true,
+    },
+    take: 15, // Get 15 users for orders
+  });
 
-  for (let i = 0; i < 12; i++) {
-    const user = allUsers[i % allUsers.length];
+  for (let i = 0; i < Math.min(12, appUsers.length); i++) {
+    const user = appUsers[i % appUsers.length];
     const hasCustomMeasurements = i % 3 === 0; // Every 3rd order has custom measurements
+
+    // Get user details from their role
+    let customerName = "Unknown User";
+    let contactNumber = "555-0000";
+    let email = user.email;
+
+    if (user.parent) {
+      customerName = `${user.parent.firstName} ${user.parent.lastName}`;
+      contactNumber = user.parent.phone || "555-0000";
+    } else if (user.student) {
+      customerName = `${user.student.firstName} ${user.student.lastName}`;
+      contactNumber = "555-9999";
+    } else if (user.admin) {
+      customerName = `${user.admin.firstName} ${user.admin.lastName}`;
+      contactNumber = user.admin.phone || "555-1111";
+    }
 
     const orderDate = new Date();
     orderDate.setDate(orderDate.getDate() - Math.floor(Math.random() * 30)); // Random date in last 30 days
 
     await prisma.order.create({
       data: {
-        userId: user.userId,
-        customerName: user.name,
-        contactNumber: user.phone,
-        email: user.email,
+        userId: user.id, // Use actual AppUser ID
+        customerName,
+        contactNumber,
+        email,
         shirtSize: sizes[Math.floor(Math.random() * sizes.length)],
         shortsSize: sizes[Math.floor(Math.random() * sizes.length)],
         socksSize: sockSizes[Math.floor(Math.random() * sockSizes.length)],
