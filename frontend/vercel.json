@@ -1,22 +1,4 @@
 {
     "buildCommand": "prisma generate && next build",
-    "installCommand": "npm install",
-    "framework": "nextjs",
-    "regions": [
-        "iad1"
-    ],
-    "env": {
-        "DATABASE_URL": "@database-url",
-        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "@clerk-publishable-key",
-        "CLERK_SECRET_KEY": "@clerk-secret-key",
-        "NEXT_PUBLIC_CLERK_SIGN_IN_URL": "/sign-in",
-        "NEXT_PUBLIC_CLERK_SIGN_UP_URL": "/sign-up",
-        "EMAIL_USER": "@email-user",
-        "EMAIL_PASSWORD": "@email-password"
-    },
-    "build": {
-        "env": {
-            "DATABASE_URL": "@database-url"
-        }
-    }
+    "framework": "nextjs"
 }
