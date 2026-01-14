@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getLandingPageData } from "@/lib/landing-data";
 import LandingContent from "@/components/landing/LandingContent";
 import { auth } from "@clerk/nextjs/server";
