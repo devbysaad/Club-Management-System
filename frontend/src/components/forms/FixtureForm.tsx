@@ -178,7 +178,6 @@ const FixtureForm = ({
                     defaultValue={data?.id}
                     register={register}
                     error={errors?.id}
-                    hidden
                 />
             )}
 

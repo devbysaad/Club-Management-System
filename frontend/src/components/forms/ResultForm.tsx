@@ -120,10 +120,10 @@ const ResultForm = ({
                         label="Rating (0-10)"
                         name="rating"
                         type="number"
-                        step="0.1"
                         defaultValue={data?.rating || 0}
                         register={register}
                         error={errors.rating}
+                        inputProps={{ step: "0.1" }}
                     />
                     <InputField
                         label="Minutes Played"
@@ -167,7 +167,6 @@ const ResultForm = ({
                     defaultValue={data?.id}
                     register={register}
                     error={errors?.id}
-                    hidden
                 />
             )}
 

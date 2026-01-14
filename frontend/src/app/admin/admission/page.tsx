@@ -56,8 +56,8 @@ const AdminAdmissionsPage = async () => {
                                         <td className="p-3 text-[var(--text-muted)]">{admission.phone}</td>
                                         <td className="p-3">
                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${admission.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
-                                                admission.status === 'REVIEWING' ? 'bg-fcBlue/20 text-fcBlue' :
-                                                    admission.status === 'ACCEPTED' ? 'bg-fcGreen/20 text-fcGreen' :
+                                                admission.status === 'UNDER_REVIEW' ? 'bg-fcBlue/20 text-fcBlue' :
+                                                    admission.status === 'APPROVED' ? 'bg-fcGreen/20 text-fcGreen' :
                                                         'bg-fcGarnet/20 text-fcGarnet'
                                                 }`}>
                                                 {admission.status}
