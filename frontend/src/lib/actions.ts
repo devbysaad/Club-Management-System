@@ -1188,10 +1188,10 @@ export const createResult = async (
                     fixtureId: data.fixtureId,
                     goals: data.goals,
                     assists: data.assists,
-                    rating: parseFloat(data.rating),
+                    rating: data.rating,
                     minutesPlayed: data.minutesPlayed,
-                    yellowCards: parseInt(data.yellowCards || "0"),
-                    redCards: parseInt(data.redCards || "0"),
+                    yellowCards: data.yellowCards || "0",
+                    redCards: data.redCards || "0",
                     notes: data.notes,
                 },
             });
@@ -1230,10 +1230,10 @@ export const updateResult = async (
                 data: {
                     goals: data.goals,
                     assists: data.assists,
-                    rating: parseFloat(data.rating),
+                    rating: data.rating,
                     minutesPlayed: data.minutesPlayed,
-                    yellowCards: parseInt(data.yellowCards || "0"),
-                    redCards: parseInt(data.redCards || "0"),
+                    yellowCards: data.yellowCards || "0",
+                    redCards: data.redCards || "0",
                     notes: data.notes,
                 },
             });
