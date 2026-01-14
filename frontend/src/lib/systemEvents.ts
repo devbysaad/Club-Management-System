@@ -401,12 +401,12 @@ async function handleMonthlyFeeReminder({ month, year }: { month: number; year: 
 
     console.log(`💰 [FEE REMINDER] ${studentsWithUnpaidFees.length} students with unpaid fees`);
 
-    const emails = studentsWithUnpaidFees.map(({ student, fee }) => {
+    const emails = studentsWithUnpaidFees.flatMap(({ student, fee }) => {
         const recipients = [student.parent.email, student.email].filter(Boolean) as string[];
 
         if (recipients.length === 0) {
             console.warn(`⚠️ [FEE REMINDER] No email for student ${student.firstName}`);
-            return null;
+            return [];
         }
 
         const html = templates.monthlyFeeReminderTemplate({
@@ -418,12 +418,13 @@ async function handleMonthlyFeeReminder({ month, year }: { month: number; year: 
             parentName: `${student.parent.firstName} ${student.parent.lastName}`,
         });
 
-        return {
-            to: recipients,
+        // Create a separate email object for each recipient
+        return recipients.map(recipient => ({
+            to: recipient,
             subject: `Monthly Fee Reminder - ${student.firstName} ${student.lastName}`,
             html,
-        };
-    }).filter(Boolean) as Array<{ to: string[]; subject: string; html: string }>;
+        }));
+    });
 
     if (emails.length === 0) {
         console.log(`✅ [FEE REMINDER] No reminders to send - all fees paid!`);
