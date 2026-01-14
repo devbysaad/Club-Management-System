@@ -149,14 +149,6 @@ const Menu = () => {
   const { isLoaded, user } = useUser();
   const role = user?.publicMetadata?.role as string | undefined;
 
-  // Debug logging
-  console.log("🔍 MENU DEBUG:", {
-    isLoaded,
-    hasUser: !!user,
-    role,
-    publicMetadata: user?.publicMetadata
-  });
-
   // Show loading skeleton while auth is loading
   if (!isLoaded) {
     return (
