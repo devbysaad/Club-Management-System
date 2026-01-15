@@ -3,11 +3,18 @@ export const dynamic = "force-dynamic";
 import Announcements from "@/components/Announcements";
 import AttendanceChartContainer from "@/components/AttendanceChartContainer";
 import CountChartContainer from "@/components/CountChartContainer";
+import EventCalendar from "@/components/EventCalendar";
 import EventCalendarContainer from "@/components/EventCalendarContainer";
 import FinanceChart from "@/components/FinanceChart";
+import RecentAdmissionsWidget from "@/components/RecentAdmissionsWidget";
+import RecentOrdersWidget from "@/components/RecentOrdersWidget";
 import UserCard from "@/components/UserCard";
+import { currentUser } from "@clerk/nextjs/server";
 
-const AdminPage = () => {
+const AdminPage = async () => {
+  const user = await currentUser();
+  const firstName = user?.firstName || "Admin";
+
   return (
     <div className="p-4 flex gap-4 flex-col md:flex-row">
       {/* LEFT */}
@@ -23,7 +30,7 @@ const AdminPage = () => {
               </span>
             </div>
             <h1 className="text-2xl font-heading font-bold text-white mb-1">
-              Welcome back, <span className="gradient-text">Carlos!</span>
+              Welcome back, <span className="gradient-text">{firstName}!</span>
             </h1>
             <p className="text-sm text-fcTextMuted">
               Here&apos;s what&apos;s happening with your club today.
