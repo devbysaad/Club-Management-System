@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAdmissionById } from "@/lib/admission-actions";
 import Link from "next/link";
 import AdmissionStatusSelector from "@/components/AdmissionStatusSelector";
+import DeleteAdmissionButton from "@/components/DeleteAdmissionButton";
 
 const AdmissionDetailPage = async ({ params }: { params: { id: string } }) => {
     const user = await currentUser();
@@ -82,6 +83,10 @@ const AdmissionDetailPage = async ({ params }: { params: { id: string } }) => {
                             >
                                 📞 Call
                             </a>
+                            <DeleteAdmissionButton
+                                admissionId={admission.id}
+                                applicantName={`${admission.firstName} ${admission.lastName}`}
+                            />
                         </div>
                     </div>
                 </div>
