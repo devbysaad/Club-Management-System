@@ -176,8 +176,15 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
         // 3. Create Clerk user for parent
         console.log("[APPROVE_ADMISSION] Creating parent Clerk user");
         const client = await clerkClient();
+
+        // Use parentEmail if provided, otherwise generate one
+        const parentEmail = admission.parentEmail ||
+            `${admission.parentName.toLowerCase().replace(/\s+/g, '.')}.parent@patohornets.local`;
+
+        console.log("[APPROVE_ADMISSION] Using parent email:", parentEmail);
+
         const parentClerkUser = await client.users.createUser({
-            emailAddress: [admission.email],
+            emailAddress: [parentEmail],
             firstName: admission.parentName.split(" ")[0],
             lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
             publicMetadata: { role: "parent" },
@@ -192,7 +199,7 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
                 userId: parentClerkUser.id,
                 firstName: admission.parentName.split(" ")[0],
                 lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
-                email: admission.email,
+                email: parentEmail, // Use parent email, not student email
                 phone: admission.parentPhone,
                 address: admission.address,
             },
@@ -231,10 +238,10 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
 
         console.log("[APPROVE_ADMISSION] Student DB record created:", student.id);
 
-        // 7. Send Clerk invitations
-        console.log("[APPROVE_ADMISSION] Sending invitations");
+        // 7. Send Clerk invitations to parent
+        console.log("[APPROVE_ADMISSION] Sending invitation to parent");
         await client.invitations.createInvitation({
-            emailAddress: admission.email,
+            emailAddress: parentEmail, // Use parent email
             publicMetadata: { role: "parent", userId: parentClerkUser.id },
             redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/sign-in`,
         });

@@ -4,6 +4,7 @@ import { updateAdmissionStatus, approveAdmission, rejectAdmission, getAgeGroups 
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { log } from "console";
 
 type AdmissionStatus = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CONVERTED";
 
@@ -94,6 +95,7 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
             toast.error("Please select an age group");
             return;
         }
+        console.log("[AdmissionStatusSelector] Approving with age group ID:", selectedAgeGroup);
 
         setLoading(true);
         console.log("[AdmissionStatusSelector] Approving with age group ID:", selectedAgeGroup);
