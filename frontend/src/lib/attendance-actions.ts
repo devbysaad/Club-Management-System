@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 
 /**
  * Mark student attendance for today
- * Admin only - uses upsert to create or update
+ * Admin and Staff only - uses upsert to create or update
  */
 export const markAttendance = async (
     studentId: string,
@@ -48,7 +48,7 @@ export const markAttendance = async (
     console.log("[MARK_ATTENDANCE] ✅ Input validation passed");
     console.log("[MARK_ATTENDANCE] 🔐 Calling withRole([ADMIN])...");
 
-    const result = await withRole([Role.ADMIN], async (user) => {
+    const result = await withRole([Role.ADMIN, Role.STAFF], async (user) => {
         console.log("[MARK_ATTENDANCE] 🔓 withRole callback entered");
         console.log("[MARK_ATTENDANCE] User:", user.email, "Role:", user.role);
 

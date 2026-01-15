@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 
 /**
  * Mark coach attendance for today
- * Admin only - marks once per 24 hours
+ * Admin and Staff can mark - once per 24 hours
  */
 export const markCoachAttendance = async (
     coachId: string,
@@ -48,7 +48,7 @@ export const markCoachAttendance = async (
     console.log("[MARK_COACH_ATTENDANCE] ✅ Input validation passed");
     console.log("[MARK_COACH_ATTENDANCE] 🔐 Calling withRole([ADMIN])...");
 
-    const result = await withRole([Role.ADMIN], async (user) => {
+    const result = await withRole([Role.ADMIN, Role.STAFF], async (user) => {
         console.log("[MARK_COACH_ATTENDANCE] 🔓 withRole callback entered");
         console.log("[MARK_COACH_ATTENDANCE] User:", user.email, "Role:", user.role);
 

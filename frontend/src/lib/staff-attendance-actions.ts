@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 
 /**
  * Mark staff attendance for today
- * Admin only - marks once per 24 hours
+ * Admin and Staff can mark - once per 24 hours
  */
 export const markStaffAttendance = async (
     staffId: string,
@@ -30,7 +30,7 @@ export const markStaffAttendance = async (
         };
     }
 
-    const result = await withRole([Role.ADMIN], async (user) => {
+    const result = await withRole([Role.ADMIN, Role.STAFF], async (user) => {
         try {
             // Get today's date at midnight (for consistent date comparison)
             const today = new Date();
