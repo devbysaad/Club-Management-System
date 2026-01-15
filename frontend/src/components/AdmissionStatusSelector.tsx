@@ -160,7 +160,7 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
         setLoading(true);
 
         const credentials = selectedParent === "new" ? {
-            parent Email,
+            parentEmail,
             parentPassword,
             studentUsername,
             studentPassword,
