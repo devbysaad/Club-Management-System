@@ -8,7 +8,7 @@ const AdmissionDetailPage = async ({ params }: { params: { id: string } }) => {
     const user = await currentUser();
     const role = user?.publicMetadata?.role;
 
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "staff") {
         redirect("/admin");
     }
 

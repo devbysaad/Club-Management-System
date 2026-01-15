@@ -8,7 +8,7 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
     const user = await currentUser();
     const role = user?.publicMetadata?.role;
 
-    if (role !== "admin") {
+    if (role !== "admin" && role !== "staff") {
         redirect("/admin");
     }
 
@@ -41,9 +41,9 @@ const OrderDetailPage = async ({ params }: { params: { id: string } }) => {
                         </p>
                     </div>
                     <span className={`px-4 py-2 rounded-full text-sm font-medium self-start ${order.status === 'PENDING' ? 'bg-fcGold/20 text-fcGold' :
-                            order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
-                                order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
-                                    'bg-fcGarnet/20 text-fcGarnet'
+                        order.status === 'PROCESSING' ? 'bg-fcBlue/20 text-fcBlue' :
+                            order.status === 'COMPLETED' ? 'bg-fcGreen/20 text-fcGreen' :
+                                'bg-fcGarnet/20 text-fcGarnet'
                         }`}>
                         {order.status}
                     </span>

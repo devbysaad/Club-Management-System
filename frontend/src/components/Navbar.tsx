@@ -10,7 +10,8 @@ const Navbar = () => {
 
   const roleLabels: Record<string, string> = {
     admin: "Club Director",
-    teacher: "Coach",
+    staff: "Staff Member",
+    coach: "Coach",
     student: "Player",
     parent: "Parent",
   };
@@ -69,34 +70,24 @@ const Navbar = () => {
         <div className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-xl hover:bg-[var(--bg-surface)] transition-all duration-300 cursor-pointer group">
           {/* Name + Role - Hidden on very small screens */}
           <div className="hidden sm:flex flex-col text-right pr-2">
-            <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-rmBlue transition-colors">
-              {/* User name comes from Clerk automatically in UserButton */}
-              <UserButton
-                showName={true}
-                appearance={{
-                  elements: {
-                    userButtonText: "text-sm font-semibold text-[var(--text-primary)] group-hover:text-rmBlue",
-                  },
-                }}
-              />
+            <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--rm-blue)] transition-colors">
+              {user?.firstName || user?.username || "User"}
             </span>
-            <span className="hidden md:flex text-[11px] text-[var(--text-muted)] items-center justify-end gap-1">
-              <span className="w-1.5 h-1.5 bg-rmBlue rounded-full" />
-              {isLoaded && role ? roleLabels[role] : "Loading..."}
+            <span className="text-[11px] text-[var(--text-muted)] flex items-center justify-end gap-1">
+              <span className="w-1.5 h-1.5 bg-[var(--rm-blue)] rounded-full" />
+              {isLoaded && role ? roleLabels[role.toLowerCase()] || role : "Loading..."}
             </span>
           </div>
 
-          {/* Mobile: Just avatar */}
-          <div className="sm:hidden">
-            <UserButton
-              showName={false}
-              appearance={{
-                elements: {
-                  userButtonAvatarBox: "w-9 h-9",
-                },
-              }}
-            />
-          </div>
+          {/* User Button */}
+          <UserButton
+            showName={false}
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "w-9 h-9",
+              },
+            }}
+          />
         </div>
       </div>
     </div>
