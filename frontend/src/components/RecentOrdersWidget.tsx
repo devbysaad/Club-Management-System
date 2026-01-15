@@ -47,7 +47,7 @@ export default async function RecentOrdersWidget() {
                                         {order.customerName}
                                     </p>
                                     <p className="text-xs text-[var(--text-muted)]">
-                                        {order.itemName} • PKR {order.totalPrice}
+                                        {order.shirtSize ? `Shirt: ${order.shirtSize}` : ''}{order.shortsSize ? ` • Shorts: ${order.shortsSize}` : ''} • PKR {order.totalAmount || 0}
                                     </p>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
