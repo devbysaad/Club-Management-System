@@ -3,11 +3,8 @@ export const dynamic = "force-dynamic";
 import Announcements from "@/components/Announcements";
 import AttendanceChartContainer from "@/components/AttendanceChartContainer";
 import CountChartContainer from "@/components/CountChartContainer";
-import EventCalendar from "@/components/EventCalendar";
 import EventCalendarContainer from "@/components/EventCalendarContainer";
 import FinanceChart from "@/components/FinanceChart";
-import RecentAdmissionsWidget from "@/components/RecentAdmissionsWidget";
-import RecentOrdersWidget from "@/components/RecentOrdersWidget";
 import UserCard from "@/components/UserCard";
 import { currentUser } from "@clerk/nextjs/server";
 
