@@ -79,65 +79,23 @@ const UserCard = async ({ type }: { type: UserType }) => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-bold text-[var(--text-primary)] group-hover:text-white transition-colors duration-300">
-            {data}
-          </h1>
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-[var(--text-muted)]">
-              {displayName}
-            </h2>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mt-4 h-1 bg-[var(--bg-surface)] rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full bg-gradient-to-r ${mappedType === 'player' ? 'from-fcGarnet to-fcGarnetLight' :
-              mappedType === 'coach' ? 'from-fcBlue to-fcBlueLight' :
-                mappedType === 'parent' ? 'from-fcGold to-fcGoldLight' :
-                  'from-fcGreen to-fcGreenLight'
-              } group-hover:animate-pulse`}
-            style={{ width: `${Math.min((data / 150) * 100, 100)}%` }}
-          />
-        </div>
+        <h1 className="text-3xl font-heading font-bold text-white my-3">{count}</h1>
+        <h2 className={`text-sm font-medium bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>
+          {config.label}
+        </h2>
       </div>
+      </Link >
     );
   } catch (error) {
-    console.error(`[UserCard] Error fetching ${type} count:`, error);
-
-    // Return fallback UI instead of crashing
-    const mappedType = type === "student" ? "player" : type === "teacher" ? "coach" : type;
-    const config = cardConfigs[mappedType] || cardConfigs.player;
-    const displayName = displayNames[type] || type;
-
-    return (
-      <div className={`
-        relative overflow-hidden rounded-2xl p-5 flex-1 min-w-[200px]
-        bg-gradient-to-br ${config.gradient}
-        border-l-4 ${config.accent}
-        glass-card opacity-50
-      `}>
-        <div className="flex justify-between items-start mb-4">
-          <div className={`${config.iconBg} p-3 rounded-xl`}>
-            <span className="text-2xl">{config.icon}</span>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-bold text-[var(--text-primary)]">
-            --
-          </h1>
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">
-            {displayName}
-          </h2>
-          <p className="text-xs text-fcTextMuted mt-2">
-            Unable to load data
-          </p>
-        </div>
+  console.error(`Error loading ${type} card:`, error);
+  return (
+    <div className="glass-card rounded-2xl p-5 flex-1 min-w-[130px]">
+      <div className="text-center text-fcTextMuted text-sm">
+        Error loading {type} data
       </div>
-    );
-  }
+    </div>
+  );
+}
 };
 
 export default UserCard;

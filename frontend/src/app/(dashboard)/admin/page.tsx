@@ -3,11 +3,8 @@ export const dynamic = "force-dynamic";
 import Announcements from "@/components/Announcements";
 import AttendanceChartContainer from "@/components/AttendanceChartContainer";
 import CountChartContainer from "@/components/CountChartContainer";
-import EventCalendar from "@/components/EventCalendar";
 import EventCalendarContainer from "@/components/EventCalendarContainer";
 import FinanceChart from "@/components/FinanceChart";
-import RecentAdmissionsWidget from "@/components/RecentAdmissionsWidget";
-import RecentOrdersWidget from "@/components/RecentOrdersWidget";
 import UserCard from "@/components/UserCard";
 
 const AdminPage = () => {
@@ -40,31 +37,22 @@ const AdminPage = () => {
           <UserCard type="coach" />
           <UserCard type="parent" />
           <UserCard type="staff" />
+          <UserCard type="admission" />
+          <UserCard type="order" />
         </div>
 
-        {/* BOTTOM CHART */}
+        {/* MIDDLE CHARTS */}
         <div className="flex gap-4 flex-col lg:flex-row">
+          {/* COUNT CHART */}
+          <div className="w-full lg:w-1/3 h-[450px]">
+            <CountChartContainer />
+          </div>
           {/* ATTENDANCE CHART */}
-          <div className="w-full lg:w-2/3 h-[500px]">
+          <div className="w-full lg:w-2/3 h-[450px]">
             <AttendanceChartContainer />
           </div>
-          {/* ANNOUNCEMENTS */}
-          <div className="w-full lg:w-1/3 flex flex-col gap-4">
-            <Announcements />
-          </div>
         </div>
 
-        {/* NEW SECTION: ADMISSIONS & ORDERS */}
-        <div className="flex gap-4 flex-col lg:flex-row">
-          {/* RECENT ADMISSIONS */}
-          <div className="w-full lg:w-1/2">
-            <RecentAdmissionsWidget />
-          </div>
-          {/* RECENT ORDERS */}
-          <div className="w-full lg:w-1/2">
-            <RecentOrdersWidget />
-          </div>
-        </div>
         {/* BOTTOM CHART */}
         <div className="w-full h-[500px]">
           <FinanceChart />
