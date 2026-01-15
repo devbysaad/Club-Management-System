@@ -141,9 +141,20 @@ export const deleteAdmission = async (id: string) => {
 // ============================================
 // APPROVE ADMISSION WORKFLOW
 // ============================================
-export const approveAdmission = async (admissionId: string, ageGroupId: string) => {
+export const approveAdmission = async (
+    admissionId: string,
+    ageGroupId: string,
+    credentials?: {
+        parentEmail: string;
+        parentPassword: string;
+        studentUsername: string;
+        studentPassword: string;
+    }
+) => {
     try {
-        console.log("[APPROVE_ADMISSION] Starting for:", admissionId, "Age Group ID:", ageGroupId);
+        console.log("[APPROVE_ADMISSION] Starting for:", admissionId);
+        console.log("[APPROVE_ADMISSION] Age Group ID:", ageGroupId);
+        console.log("[APPROVE_ADMISSION] Credentials provided:", !!credentials);
 
         // 1. Validate age group exists
         if (!ageGroupId) {
@@ -177,19 +188,28 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
         console.log("[APPROVE_ADMISSION] Creating parent Clerk user");
         const client = await clerkClient();
 
-        // Use parentEmail if provided, otherwise generate one
-        const parentEmail = admission.parentEmail ||
+        // Use provided credentials or generate defaults
+        const parentEmail = credentials?.parentEmail ||
+            admission.parentEmail ||
             `${admission.parentName.toLowerCase().replace(/\s+/g, '.')}.parent@patohornets.local`;
 
         console.log("[APPROVE_ADMISSION] Using parent email:", parentEmail);
 
-        const parentClerkUser = await client.users.createUser({
+        // Create parent Clerk user with password if provided
+        const parentUserData: any = {
             emailAddress: [parentEmail],
             firstName: admission.parentName.split(" ")[0],
             lastName: admission.parentName.split(" ").slice(1).join(" ") || admission.lastName,
             publicMetadata: { role: "parent" },
-            skipPasswordRequirement: true,
-        });
+        };
+
+        if (credentials?.parentPassword) {
+            parentUserData.password = credentials.parentPassword;
+        } else {
+            parentUserData.skipPasswordRequirement = true;
+        }
+
+        const parentClerkUser = await client.users.createUser(parentUserData);
 
         console.log("[APPROVE_ADMISSION] Parent Clerk user created:", parentClerkUser.id);
 
@@ -209,13 +229,27 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
 
         // 5. Create Clerk user for student
         console.log("[APPROVE_ADMISSION] Creating student Clerk user");
-        const studentClerkUser = await client.users.createUser({
-            emailAddress: [`${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`],
+
+        const studentEmail = credentials?.studentUsername
+            ? `${credentials.studentUsername}@patohornets.local`
+            : `${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`;
+
+        console.log("[APPROVE_ADMISSION] Using student email:", studentEmail);
+
+        const studentUserData: any = {
+            emailAddress: [studentEmail],
             firstName: admission.firstName,
             lastName: admission.lastName,
             publicMetadata: { role: "student" },
-            skipPasswordRequirement: true,
-        });
+        };
+
+        if (credentials?.studentPassword) {
+            studentUserData.password = credentials.studentPassword;
+        } else {
+            studentUserData.skipPasswordRequirement = true;
+        }
+
+        const studentClerkUser = await client.users.createUser(studentUserData);
 
         console.log("[APPROVE_ADMISSION] Student Clerk user created:", studentClerkUser.id);
 
@@ -225,7 +259,7 @@ export const approveAdmission = async (admissionId: string, ageGroupId: string) 
                 userId: studentClerkUser.id,
                 firstName: admission.firstName,
                 lastName: admission.lastName,
-                email: `${admission.firstName.toLowerCase()}.${admission.lastName.toLowerCase()}@patohornets.local`,
+                email: studentEmail,
                 phone: admission.phone,
                 dateOfBirth: admission.dateOfBirth,
                 address: admission.address,

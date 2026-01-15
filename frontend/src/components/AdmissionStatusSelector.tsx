@@ -126,7 +126,12 @@ const AdmissionStatusSelector = ({ admissionId, currentStatus }: AdmissionStatus
         console.log("  Student Username:", studentUsername);
 
         setLoading(true);
-        const result = await approveAdmission(admissionId, selectedAgeGroup);
+        const result = await approveAdmission(admissionId, selectedAgeGroup, {
+            parentEmail,
+            parentPassword,
+            studentUsername,
+            studentPassword,
+        });
 
         if (result.success) {
             setStatus("CONVERTED");
