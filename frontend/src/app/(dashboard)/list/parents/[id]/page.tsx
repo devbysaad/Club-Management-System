@@ -45,6 +45,13 @@ const SingleParentPage = async ({
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* LEFT */}
       <div className="w-full xl:w-2/3">
+        {/* Back Button */}
+        <Link href="/list/parents" className="inline-flex items-center gap-2 text-fcGold hover:text-fcGoldDark transition-colors mb-4">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Parents
+        </Link>
         {/* TOP */}
         <div className="flex flex-col lg:flex-row gap-4">
           {/* USER INFO CARD */}
