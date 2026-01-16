@@ -117,3 +117,16 @@ export const deleteOrder = async (id: string) => {
         return { success: false, error: true, message: err.message || "Failed to delete order" };
     }
 };
+
+export const getOrdersByUserId = async (userId: string) => {
+    try {
+        const orders = await prisma.jerseyOrder.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return orders;
+    } catch (err) {
+        console.error("[GET_ORDERS_BY_USER] Error:", err);
+        return [];
+    }
+};

@@ -356,3 +356,25 @@ export const rejectAdmission = async (admissionId: string, reason?: string) => {
         };
     }
 };
+
+// ============================================
+// GET ADMISSIONS BY PARENT EMAIL
+// ============================================
+export const getAdmissionsByParentEmail = async (parentEmail: string) => {
+    try {
+        const admissions = await prisma.admission.findMany({
+            where: {
+                OR: [
+                    { parentEmail: parentEmail },
+                    { email: parentEmail }, // In case parent used their own email
+                ],
+                isDeleted: false,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return admissions;
+    } catch (err) {
+        console.error("[GET_ADMISSIONS_BY_PARENT_EMAIL] Error:", err);
+        return [];
+    }
+};
