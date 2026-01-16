@@ -106,6 +106,8 @@ const displayNames: Record<string, string> = {
   teacher: "Coach",
   student: "Player",
   parent: "Parent",
+  staff: "Staff",
+  ageGroup: "Age Group",
   subject: "Training Program",
   class: "Team",
   lesson: "Session",
